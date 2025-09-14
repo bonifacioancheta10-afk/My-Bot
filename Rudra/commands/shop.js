@@ -34,7 +34,7 @@ function saveShop(data) {
 
 module.exports.config = {
   name: "shop",
-  version: "11.0.0",
+  version: "12.0.0",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Auto Shop system (post every 20 minutes in current GC only)",
@@ -43,7 +43,7 @@ module.exports.config = {
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args, Users, Threads }) {
+module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID } = event;
 
   let bank = loadBank();
@@ -70,7 +70,8 @@ module.exports.run = async function ({ api, event, args, Users, Threads }) {
     let listMsg = `🛒 ACTIVE SHOP SELLERS (This GC) 🛒\n\n`;
     shopData[threadID].sellers.forEach((s, i) => {
       const bal = bank[s.seller]?.balance ?? 0;
-      listMsg += `${i + 1}. 👤 ${s.name}\n📦 ${s.details}\n💰 Balance: ${bal.toLocaleString()} coins\n\n`;
+      const fbLink = `https://www.facebook.com/profile.php?id=${s.seller}`;
+      listMsg += `${i + 1}. 👤 ${s.name}\n🔗 FB: ${fbLink}\n📦 ${s.details.join(", ")}\n💰 Balance: ${bal.toLocaleString()} coins\n\n`;
     });
     return api.sendMessage(listMsg, threadID);
   }
@@ -81,22 +82,36 @@ module.exports.run = async function ({ api, event, args, Users, Threads }) {
       return api.sendMessage("❌ Usage: /shop add <details>", threadID);
     }
 
-    const details = args.slice(1).join(" ");
+    // details can be multiple lines
+    const detailsText = args.slice(1).join(" ");
+    const details = detailsText.split(/\n|,/).map(d => d.trim()).filter(Boolean);
+
     const name = await Users.getNameUser(senderID);
 
     if (bank[senderID].balance < 50) {
       return api.sendMessage("❌ You need at least 50 coins to join the auto shop.", threadID);
     }
 
-    shopData[threadID].sellers.push({
-      seller: senderID,
-      name,
-      details,
-      threadID
-    });
+    let seller = shopData[threadID].sellers.find(s => s.seller === senderID);
+    if (seller) {
+      // append new details (avoid duplicates)
+      details.forEach(d => {
+        if (!seller.details.includes(d)) {
+          seller.details.push(d);
+        }
+      });
+    } else {
+      shopData[threadID].sellers.push({
+        seller: senderID,
+        name,
+        details,
+        threadID
+      });
+    }
+
     saveShop(shopData);
 
-    return api.sendMessage(`✅ Added to auto shop! (50 coins will be deducted every 20 mins)`, threadID);
+    return api.sendMessage(`✅ Added/updated your shop entry! (50 coins will be deducted every 20 mins)`, threadID);
   }
 
   return api.sendMessage("❌ Usage: /shop add <details> | /shop remove | /shop list", threadID);
@@ -111,6 +126,13 @@ module.exports.handleEvent = async function ({ api }) {
   setInterval(async () => {
     let bank = loadBank();
     let shopData = loadShop();
+
+    const nextTime = new Date(Date.now() + 20 * 60 * 1000);
+    const timeString = nextTime.toLocaleTimeString("en-PH", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true
+    });
 
     for (const threadID of Object.keys(shopData)) {
       if (!shopData[threadID].sellers || shopData[threadID].sellers.length === 0) continue;
@@ -128,14 +150,14 @@ module.exports.handleEvent = async function ({ api }) {
         }
 
         bank[seller.seller].balance -= 50;
+        const fbLink = `https://www.facebook.com/profile.php?id=${seller.seller}`;
 
-        postMessage += `👤 Seller: ${seller.name}\n📦 ${seller.details}\n💰 Balance: ${bank[seller.seller].balance.toLocaleString()} coins\n\n━━━━━━━━━━━━━━\n\n`;
+        postMessage += `👤 Seller: ${seller.name}\n🔗 FB: ${fbLink}\n📦 ${seller.details.join(", ")}\n💰 Balance: ${bank[seller.seller].balance.toLocaleString()} coins\n\n━━━━━━━━━━━━━━\n\n`;
         stillActive.push(seller);
       });
 
       if (stillActive.length > 0) {
-        postMessage += `👉 Want to sell too?\nType: /shop add <details> (50 coins every 20 mins)\n\n📖 Type /help to see all commands.`;
-
+        postMessage += `👉 Want to sell too?\nType: /shop add <details> (50 coins every 20 mins)\n\n⏰ Next post: ${timeString}`;
         api.sendMessage(postMessage, threadID);
       }
 
