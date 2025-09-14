@@ -1,6 +1,6 @@
 module.exports.config = {
   name: "help",
-  version: "3.3.0",
+  version: "3.3.1",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Show all available commands and usage",
@@ -9,7 +9,7 @@ module.exports.config = {
   cooldowns: 1
 };
 
-// Function para gawing Unicode bold yung text
+// 🔹 Function: Convert only letters/numbers to Unicode Bold
 function toUnicodeBold(str) {
   const normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   const bold = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭" +
@@ -17,7 +17,7 @@ function toUnicodeBold(str) {
                "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟟𝟴𝟵";
   return str.split("").map(ch => {
     const i = normal.indexOf(ch);
-    return i >= 0 ? bold[i] : ch;
+    return i >= 0 ? bold[i] : ch; // letters & digits → bold, symbols → unchanged
   }).join("");
 }
 
@@ -25,7 +25,7 @@ module.exports.run = async function ({ api, event, args }) {
   const { threadID } = event;
   const commands = global.client.commands;
 
-  // Case: /help <command>
+  // 🔹 Case: /help <command>
   if (args[0]) {
     const cmdName = args[0].toLowerCase();
     const command = commands.get(cmdName) || commands.get(global.client.aliases?.get(cmdName));
@@ -47,7 +47,7 @@ module.exports.run = async function ({ api, event, args }) {
     return api.sendMessage(details, threadID);
   }
 
-  // Case: /help (list all commands + usage)
+  // 🔹 Case: /help (list all commands + usage)
   let helpMenu = "📖 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗟𝗘 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦\n\n";
   commands.forEach(cmd => {
     const cfg = cmd.config;
