@@ -1,16 +1,15 @@
 const axios = require("axios");
 
 module.exports.config = {
-  name: "bot",
+  name: "ai",
   version: "3.0.5",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Chat with GPT-4o (stable, no history)",
   commandCategory: "ai",
   usePrefix: true,
-  usages: "bot <message> | ai <message>",
-  cooldowns: 5,
-  aliases: ["ai"], // 🔹 Dito mo idinadagdag alias
+  usages: "/bot <message>",
+  cooldowns: 5// 🔹 Dito mo idinadagdag alias
 };
 
 // 🔹 Command with prefix only (/bot or /ai)
