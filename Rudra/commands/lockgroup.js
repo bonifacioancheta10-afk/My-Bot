@@ -1,80 +1,84 @@
 const fs = require("fs");
 const path = require("path");
+const axios = require("axios");
 
-const lockedSettings = {}; // dito sine-save lahat ng naka-lock
+// memory storage for locked groups
+let lockedSettings = {};
 
 module.exports.config = {
   name: "lockgroup",
-  version: "1.0.1",
+  version: "1.1.0",
+  hasPermssion: 2,
   credits: "ChatGPT",
-  description: "Lock specific group settings (name, photo, etc.)",
-  usages: "[name/photo]",
-  cooldown: 5,
+  description: "Lock/unlock group name & photo",
+  commandCategory: "group",
+  usages: "lockgroup name <new name> | lockgroup photo <reply photo> | lockgroup unlock",
+  cooldowns: 5
 };
 
-module.exports.lockedSettings = lockedSettings;
-
-module.exports.run = async function ({ api, event, args }) {
-  const { threadID, messageID } = event;
+module.exports.run = async ({ api, event, args }) => {
+  const { threadID, messageReply } = event;
 
   if (!args[0]) {
-    return api.sendMessage(
-      "⚙️ Usage:\n/lockgroup name → lock group name\n/lockgroup photo → lock group photo",
-      threadID,
-      messageID
-    );
+    return api.sendMessage("❗ Usage: lockgroup name/photo/unlock", threadID);
   }
 
-  const type = args[0].toLowerCase();
-  if (!lockedSettings[threadID]) lockedSettings[threadID] = {};
-
-  switch (type) {
+  switch (args[0].toLowerCase()) {
+    // lock group name
     case "name": {
+      const name = args.slice(1).join(" ");
+      if (!name) return api.sendMessage("⚠️ Provide a group name!", threadID);
+
+      lockedSettings[threadID] = lockedSettings[threadID] || {};
+      lockedSettings[threadID].name = name;
+
       try {
-        const threadInfo = await api.getThreadInfo(threadID);
-        lockedSettings[threadID].name = threadInfo.threadName;
-        api.sendMessage(`🔒 Group name locked to: "${threadInfo.threadName}"`, threadID, messageID);
-      } catch (err) {
-        console.error(err);
-        api.sendMessage("⚠ Error while locking group name.", threadID, messageID);
+        await api.setTitle(name, threadID);
+        return api.sendMessage(`🔒 Group name locked to: "${name}"`, threadID);
+      } catch {
+        return api.sendMessage("⚠️ Bot is not admin, cannot set name!", threadID);
       }
-      break;
     }
 
+    // lock group photo
     case "photo": {
+      if (!messageReply || !messageReply.attachments || messageReply.attachments.length === 0) {
+        return api.sendMessage("⚠️ Reply with a photo to lock!", threadID);
+      }
+
+      const attachment = messageReply.attachments[0];
+      if (attachment.type !== "photo") {
+        return api.sendMessage("⚠️ Please reply to a valid photo!", threadID);
+      }
+
+      const photoUrl = attachment.url;
+      const savePath = path.join(__dirname, `../cache/${threadID}_lockphoto.png`);
+
       try {
-        const cachePath = path.join(__dirname, "cache");
-        if (!fs.existsSync(cachePath)) fs.mkdirSync(cachePath);
+        const res = await axios.get(photoUrl, { responseType: "arraybuffer" });
+        fs.writeFileSync(savePath, Buffer.from(res.data, "binary"));
 
-        const photoPath = path.join(cachePath, `group_photo_${threadID}.png`);
+        lockedSettings[threadID] = lockedSettings[threadID] || {};
+        lockedSettings[threadID].image = savePath;
 
-        // kunin latest group image
-        const threadInfo = await api.getThreadInfo(threadID);
-        if (!threadInfo.imageSrc) {
-          return api.sendMessage("⚠ No group photo found to lock.", threadID, messageID);
-        }
-
-        // i-download yung current photo
-        const request = require("request");
-        request(threadInfo.imageSrc)
-          .pipe(fs.createWriteStream(photoPath))
-          .on("close", () => {
-            lockedSettings[threadID].image = photoPath;
-            api.sendMessage("🖼️ Group photo locked!", threadID, messageID);
-          });
+        await api.changeGroupImage(fs.createReadStream(savePath), threadID);
+        return api.sendMessage("🖼️ Group photo locked!", threadID);
       } catch (err) {
         console.error(err);
-        api.sendMessage("⚠ Error while locking group photo.", threadID, messageID);
+        return api.sendMessage("⚠️ Failed to save or set the photo!", threadID);
       }
-      break;
+    }
+
+    // unlock everything
+    case "unlock": {
+      delete lockedSettings[threadID];
+      return api.sendMessage("🔓 Group lock removed.", threadID);
     }
 
     default:
-      api.sendMessage(
-        "⚠ Invalid type.\nOptions: name / photo",
-        threadID,
-        messageID
-      );
-      break;
+      return api.sendMessage("❗ Usage: lockgroup name/photo/unlock", threadID);
   }
 };
+
+// export para ma-access sa events
+module.exports.lockedSettings = lockedSettings;
