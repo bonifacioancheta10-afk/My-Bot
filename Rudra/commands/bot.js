@@ -2,36 +2,24 @@ const axios = require("axios");
 
 module.exports.config = {
   name: "bot",
-  version: "3.0.3",
+  version: "3.0.5",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Chat with GPT-4o (stable, no history)",
   commandCategory: "ai",
   usePrefix: true,
-  usages: "bot <message>",
+  usages: "bot <message> | ai <message>",
   cooldowns: 5,
+  aliases: ["ai"], // 🔹 Dito mo idinadagdag alias
 };
 
-// 🔹 Command with prefix
+// 🔹 Command with prefix only (/bot or /ai)
 module.exports.run = async function ({ api, event, args }) {
   let userMessage = args.join(" ").trim();
   if (!userMessage) {
     return api.sendMessage("❌ Please type a message.", event.threadID, event.messageID);
   }
   return gptReply(api, event, userMessage);
-};
-
-// 🔹 Auto-detect kapag may "bot", "gpt", "jandel", o "ai" (word boundary only)
-module.exports.handleEvent = async function ({ api, event }) {
-  const rawMessage = event.body?.trim();
-  if (!rawMessage) return;
-
-  // Regex: detect bot, gpt, jandel, ai (whole word only)
-  if (/\b(bot|gpt|jandel|ai)\b/i.test(rawMessage)) {
-    let cleaned = rawMessage.replace(/\b(bot|gpt|jandel|ai)\b/gi, "").trim();
-    if (!cleaned) cleaned = "hello there";
-    return gptReply(api, event, cleaned);
-  }
 };
 
 // 🔹 GPT-4o API handler (20s timeout, no reaction)
@@ -51,7 +39,6 @@ async function gptReply(api, event, userMessage) {
     console.error("❌ GPT-4o API Error:", e.message);
   }
 
-  // 🔹 Single error message
   if (!reply || reply.length < 2) {
     reply = "❌ I can’t connect to GPT right now.";
   }
