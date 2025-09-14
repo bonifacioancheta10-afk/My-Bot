@@ -2,10 +2,10 @@ const axios = require("axios");
 
 module.exports.config = {
   name: "bot",
-  version: "2.3.2",
+  version: "3.0.1",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Chat with Simsimi AI (stable, no history)",
+  description: "Chat with GPT-5 (stable, no history)",
   commandCategory: "ai",
   usePrefix: true,
   usages: "bot <message>",
@@ -18,48 +18,44 @@ module.exports.run = async function ({ api, event, args }) {
   if (!userMessage) {
     return api.sendMessage("❌ Please type a message.", event.threadID, event.messageID);
   }
-  return simsimiReply(api, event, userMessage);
+  return gptReply(api, event, userMessage);
 };
 
-// 🔹 Auto-detect kapag may "jandel" o "bot"
+// 🔹 Auto-detect kapag may "bot", "gpt", "jandel", o "ai" (word boundary only)
 module.exports.handleEvent = async function ({ api, event }) {
   const rawMessage = event.body?.trim();
   if (!rawMessage) return;
 
-  // Case: message contains "jandel" or "bot"
-  if (/\bjandel\b/i.test(rawMessage) || /\bbot\b/i.test(rawMessage)) {
-    let cleaned = rawMessage.replace(/\bjandel\b/gi, "").replace(/\bbot\b/gi, "").trim();
+  // Regex: detect bot, gpt, jandel, ai (whole word only)
+  if (/\b(bot|gpt|jandel|ai)\b/i.test(rawMessage)) {
+    let cleaned = rawMessage.replace(/\b(bot|gpt|jandel|ai)\b/gi, "").trim();
     if (!cleaned) cleaned = "hello there";
-    return simsimiReply(api, event, cleaned);
+    return gptReply(api, event, cleaned);
   }
 };
 
-// 🔹 Simsimi handler (no history)
-async function simsimiReply(api, event, userMessage) {
+// 🔹 GPT-5 API handler (no history)
+async function gptReply(api, event, userMessage) {
   api.setMessageReaction("🤖", event.messageID, () => {}, true);
 
   let reply = null;
-
   try {
-    let res = await axios.get("https://simsimi.ooguy.com/sim", {
-      params: { query: userMessage, apikey: "937e288d38e944108cc7c3de462fc35f6ce5a865" },
-      timeout: 8000
+    const res = await axios.get("https://daikyu-api.up.railway.app/api/openai-gpt-5", {
+      params: {
+        ask: userMessage,
+        uid: event.senderID
+      },
+      timeout: 10000
     });
 
-    reply = res.data?.respond;
+    reply = res.data?.response;
   } catch (e) {
-    console.error("❌ Simsimi API Error:", e.message);
+    console.error("❌ GPT-5 API Error:", e.message);
   }
 
-  // 🔹 Fallback if no reply
+  // 🔹 Single error message
   if (!reply || reply.length < 2) {
-    const fallbacks = [
-      "😅 I can’t connect to Simsimi right now.",
-      "🤖 Sorry, the Simsimi server seems down.",
-      "😕 I don’t understand, can you repeat?",
-      "⚠️ Simsimi error, but I’m still here."
-    ];
-    reply = fallbacks[Math.floor(Math.random() * fallbacks.length)];
+    reply = "❌ I can’t connect to GPT right now.";
   }
 
   api.setMessageReaction("✅", event.messageID, () => {}, true);
