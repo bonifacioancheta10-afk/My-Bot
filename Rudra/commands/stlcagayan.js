@@ -17,7 +17,7 @@ function saveCache(data) {
 
 module.exports.config = {
   name: "stlcagayan",
-  version: "1.0.0",
+  version: "1.1.0",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Fetch latest STL Cagayan results from FB page",
@@ -26,7 +26,6 @@ module.exports.config = {
   cooldowns: 10
 };
 
-// manual trigger
 module.exports.run = async function ({ api, event }) {
   const result = await fetchSTLCagayan();
   if (result) {
@@ -36,7 +35,6 @@ module.exports.run = async function ({ api, event }) {
   }
 };
 
-// auto-check every 5 minutes
 let started = false;
 module.exports.handleEvent = async function ({ api }) {
   if (started) return;
@@ -51,34 +49,43 @@ module.exports.handleEvent = async function ({ api }) {
       cache.lastPost = result;
       saveCache(cache);
 
-      // auto-post to all GCs where bot is active
       const threads = await api.getThreadList(50, null, ["INBOX"]);
       const groupThreads = threads.filter(t => t.isGroup);
 
       for (const t of groupThreads) {
         api.sendMessage("📢 [AUTO] STL Cagayan Result Update:\n\n" + result, t.threadID);
-        await new Promise(res => setTimeout(res, 1000)); // avoid spam
+        await new Promise(res => setTimeout(res, 1200));
       }
     }
   }, 5 * 60 * 1000);
 };
 
-// scraper function
 async function fetchSTLCagayan() {
   try {
-    const url = "https://www.facebook.com/share/1D2AUnufZZ/"; // STL Cagayan FB link
-    const browser = await puppeteer.launch({ headless: true });
+    const url = "https://www.facebook.com/STLCagayanProvince";  // use the correct FB page link
+    const browser = await puppeteer.launch({
+      headless: true,
+      args: [
+        "--no-sandbox",
+        "--disable-setuid-sandbox",
+        "--disable-blink-features=AutomationControlled"
+      ]
+    });
     const page = await browser.newPage();
-    await page.goto(url, { waitUntil: "networkidle2" });
+    await page.goto(url, { waitUntil: "domcontentloaded", timeout: 60000 });
+
+    // Wait for posts to load
+    await page.waitForSelector("div[role='article']", { timeout: 15000 });
 
     const posts = await page.evaluate(() => {
       return Array.from(document.querySelectorAll("div[role='article']"))
         .map(el => el.innerText)
-        .filter(Boolean);
+        .filter(text => text && text.trim().length > 0);
     });
 
     await browser.close();
 
+    // find a post that looks like STL Cagayan result
     const resultPost = posts.find(p => /STL\s+Cagayan/i.test(p));
     return resultPost || null;
   } catch (err) {
