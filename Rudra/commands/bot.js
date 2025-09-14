@@ -2,10 +2,10 @@ const axios = require("axios");
 
 module.exports.config = {
   name: "bot",
-  version: "3.0.2",
+  version: "3.0.3",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Chat with GPT-5 (stable, no history)",
+  description: "Chat with GPT-4o (stable, no history)",
   commandCategory: "ai",
   usePrefix: true,
   usages: "bot <message>",
@@ -34,21 +34,21 @@ module.exports.handleEvent = async function ({ api, event }) {
   }
 };
 
-// 🔹 GPT-5 API handler (no history, no reaction)
+// 🔹 GPT-4o API handler (20s timeout, no reaction)
 async function gptReply(api, event, userMessage) {
   let reply = null;
   try {
-    const res = await axios.get("https://daikyu-api.up.railway.app/api/openai-gpt-5", {
+    const res = await axios.get("https://daikyu-api.up.railway.app/api/gpt-4o-2024", {
       params: {
         ask: userMessage,
         uid: event.senderID
       },
-      timeout: 10000
+      timeout: 20000 // 20 seconds timeout
     });
 
     reply = res.data?.response;
   } catch (e) {
-    console.error("❌ GPT-5 API Error:", e.message);
+    console.error("❌ GPT-4o API Error:", e.message);
   }
 
   // 🔹 Single error message
