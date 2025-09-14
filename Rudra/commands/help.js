@@ -1,84 +1,61 @@
 module.exports.config = {
-  name: "help", // Command is /help
-  version: "2.2.1",
+  name: "help",
+  version: "3.3.0",
   hasPermssion: 0,
-  credits: "Edited by ChatGPT",
-  description: "Custom Help Command (only selected commands shown)",
+  credits: "ChatGPT",
+  description: "Show all available commands and usage",
   commandCategory: "system",
-  usages: "/help",
+  usages: "/help [command]",
   cooldowns: 1
 };
 
-module.exports.run = function ({ api, event }) {
+// Function para gawing Unicode bold yung text
+function toUnicodeBold(str) {
+  const normal = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+  const bold = "𝗔𝗕𝗖𝗗𝗘𝗙𝗚𝗛𝗜𝗝𝗞𝗟𝗠𝗡𝗢𝗣𝗤𝗥𝗦𝗧𝗨𝗩𝗪𝗫𝗬𝗭" +
+               "𝗮𝗯𝗰𝗱𝗲𝗳𝗴𝗵𝗶𝗷𝗸𝗹𝗺𝗻𝗼𝗽𝗾𝗿𝘀𝘁𝘂𝘃𝘄𝘅𝘆𝘇" +
+               "𝟬𝟭𝟮𝟯𝟰𝟱𝟲𝟟𝟴𝟵";
+  return str.split("").map(ch => {
+    const i = normal.indexOf(ch);
+    return i >= 0 ? bold[i] : ch;
+  }).join("");
+}
+
+module.exports.run = async function ({ api, event, args }) {
   const { threadID } = event;
+  const commands = global.client.commands;
 
-  // Unicode Bold Help Menu
-  const helpMenu = `
-📖 𝗕𝗢𝗧 𝗖𝗢𝗠𝗠𝗔𝗡𝗗 𝗚𝗨𝗜𝗗𝗘
+  // Case: /help <command>
+  if (args[0]) {
+    const cmdName = args[0].toLowerCase();
+    const command = commands.get(cmdName) || commands.get(global.client.aliases?.get(cmdName));
 
-💰 /𝗕𝗔𝗡𝗞  
-📌 Check your balance, deposit, or withdraw coins.  
-📝 Example: /bank
-📝 Example: /bank all
+    if (!command) {
+      return api.sendMessage(`❌ Command "${cmdName}" not found.`, threadID);
+    }
 
-📦 /𝗦𝗛𝗢𝗣  
-📌 Add an item to auto-post in all GCs every 20 minutes (20 coins per post).  
-📝 Example: /shop add For Sale Raccoon
-📝 Example: /shop list  
-📝 Example: /shop remove  
+    const config = command.config;
+    const details = `
+📖 𝗛𝗘𝗟𝗣 → /${toUnicodeBold(config.name)}
 
-🎯 /𝗕𝗜𝗗  
-📌 Create a bidding system for items.  
-📝 Example: /bid start raccoon 50  
-📝 Example: /bid end  
+📝 Description: ${config.description || "No description"}
+⚙️ Usage: ${config.usages || "No usage info"}
+👤 Permission: ${config.hasPermssion || 0}
+⏱ Cooldown: ${config.cooldowns || 0}s
+    `;
 
-📊 /𝗦𝗧𝗢𝗖𝗞  
-📌 View or manage item stock.  
-📝 Example: /stock
-📝 Example: /stock on
-📝 Example: /stock off 
+    return api.sendMessage(details, threadID);
+  }
 
-🔍 /𝗖𝗛𝗘𝗖𝗞  
-📌 Check a user's profile or info.
-📝 Example: /check
-📝 Example: /check @mention  
-📝 Example: /check all
+  // Case: /help (list all commands + usage)
+  let helpMenu = "📖 𝗔𝗩𝗔𝗜𝗟𝗔𝗕𝗟𝗘 𝗖𝗢𝗠𝗠𝗔𝗡𝗗𝗦\n\n";
+  commands.forEach(cmd => {
+    const cfg = cmd.config;
+    helpMenu += `✨ /${toUnicodeBold(cfg.name)}\n`;
+    helpMenu += `📝 ${cfg.usages || "No usage info"}\n\n`;
+  });
 
-🐾 /𝗣𝗘𝗧𝗖𝗔𝗟𝗖  
-📌 Pet calculator for stats and growth.  
-📝 Example: /petcalc 1 3.7 
-
-🤖 /𝗕𝗢𝗧  
-📌 Chat with the bot.  
-📝 Example: bot hello  
-
-🧠 /𝗚𝗣𝗧  
-📌 Chat with the AI assistant.  
-📝 Example: /gpt make me a poem  
-
-🚨 /𝗦𝗖𝗔𝗠𝗠𝗘𝗥  
-📌 View or update the scammer list of the GC.  
-📝 Example: /scammer add @mention  
-📝 Example: /scammer list  
-
-📜 /𝗥𝗨𝗟𝗘𝗦  
-📌 Show the GC and bot rules.  
-📝 Example: /rules  
-
-🎰 /𝗦𝗟𝗢𝗧  
-📌 Try your luck with a slot game.  
-📝 Example: /slot 100  
-
-👢 /𝗞𝗜𝗖𝗞  
-📌 Kick a member using mention.  
-📝 Example: /kick @mention  
-
-━━━━━━━━━━━━━━━  
-✨ Use /help <command> to see detailed usage.  
-
-👉 𝗝𝗼𝗶𝗻 𝗼𝘂𝗿 𝗕𝘂𝘆 & 𝗦𝗲𝗹𝗹 𝗚𝗖:  
-**https://m.me/j/AbYBqABSq7cyHsBk/**
-`;
+  helpMenu += "━━━━━━━━━━━━━━━\n✨ Use /help <command> to see detailed usage.";
 
   return api.sendMessage(helpMenu, threadID);
 };
