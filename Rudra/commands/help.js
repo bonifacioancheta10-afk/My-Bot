@@ -1,9 +1,9 @@
 module.exports.config = {
   name: "help",
-  version: "3.4.3",
+  version: "3.7.1",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Show all available commands and usage",
+  description: "Show all available commands grouped by category with styled brackets",
   commandCategory: "system",
   usages: "/help [command]",
   cooldowns: 1
@@ -19,34 +19,56 @@ module.exports.run = async function ({ api, event, args }) {
     const command = commands.get(cmdName) || commands.get(global.client.aliases?.get(cmdName));
 
     if (!command) {
-      return api.sendMessage(`❌ Command "${cmdName}" not found.`, threadID);
+      return api.sendMessage(`❌ Command "/${cmdName}" not found.`, threadID);
     }
 
     const config = command.config;
-    let details = `HELP → /${config.name}\n\n`;
-    details += `Description: ${config.description || "No description"}\n`;
-    if (config.usages) details += `Usage: ${config.usages}\n`;
-    details += `Permission: ${config.hasPermssion || 0}\n`;
-    details += `Cooldown: ${config.cooldowns || 0}s`;
+    let details = `📖 HELP → /${config.name}\n\n`;
+    details += `📝 Description: ${config.description || "No description"}\n`;
+    if (config.usages) details += `⚡ Usage: ${config.usages}\n`;
+    details += `🔑 Permission: ${config.hasPermssion || 0}\n`;
+    details += `⏳ Cooldown: ${config.cooldowns || 0}s`;
 
     return api.sendMessage(details, threadID);
   }
 
-  // 📌 Case: /help (list all with styled numbering)
-  let helpMenu = "AVAILABLE COMMANDS\n━━━━━━━━━━━━━━━\n\n";
+  // 📌 Category Icons
+  const categoryIcons = {
+    "system": "⚙️",
+    "moderation": "🛡️",
+    "education": "📚",
+    "music": "🎵",
+    "image": "🖼️",
+    "tools": "🛠️",
+    "gag tools": "😂",
+    "others": "📦"
+  };
 
-  let i = 1;
+  // 📌 Group commands per category
+  let categorized = {};
   commands.forEach(cmd => {
     const cfg = cmd.config;
-    helpMenu += `【${i}】 ✦ /${cfg.name}\n`;
-    if (cfg.usages) helpMenu += `    Usage: ${cfg.usages}\n`;
-    helpMenu += "\n";
-    i++;
+    const category = cfg.commandCategory?.toLowerCase() || "others";
+    if (!categorized[category]) categorized[category] = [];
+    categorized[category].push(cfg);
   });
 
-  helpMenu += "━━━━━━━━━━━━━━━\nUse /help <command> to see detailed usage.\n\n";
-  helpMenu += "👑 𝗕𝗢𝗧 𝗢𝗪𝗡𝗘𝗥\n";
-  helpMenu += "   𝗝𝗮𝘆𝗹𝗼𝗿𝗱 𝗟𝗮 𝗣𝗲ñ𝗮\n";
+  // 📌 Build Help Menu (bracket style + slash)
+  let helpMenu = "Available Commands:\n\n";
+
+  for (const [category, cmds] of Object.entries(categorized)) {
+    const icon = categoryIcons[category] || "📦";
+    helpMenu += `┌─ ${icon} | ${category.charAt(0).toUpperCase() + category.slice(1)}\n`;
+
+    cmds.forEach(cfg => {
+      helpMenu += `│ - /${cfg.name}\n`;
+    });
+
+    helpMenu += `└───────────────\n\n`;
+  }
+
+  helpMenu += "👑 BOT OWNER\n";
+  helpMenu += "   Jaylord La Peña\n";
   helpMenu += "   🌐 https://www.facebook.com/jaylordlapena2298";
 
   return api.sendMessage(helpMenu, threadID);
