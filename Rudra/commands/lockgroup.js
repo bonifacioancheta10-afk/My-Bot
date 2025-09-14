@@ -1,50 +1,44 @@
+// Sa lockgroup.js
 const fs = require("fs");
-let lockedSettings = {};
+const path = require("path");
 
-module.exports.config = {
-  name: "lockgroup",
-  version: "1.0.0",
-  hasPermssion: 0,
-  credits: "ChatGPT",
-  description: "Lock/unlock group name & photo",
-  commandCategory: "group",
-  usages: "lockgroup name/photo/reset",
-  cooldowns: 5,
-};
+const lockedSettings = {};
 
-module.exports.run = async ({ api, event, args }) => {
-  const { threadID, messageID } = event;
-  const sub = args[0];
+module.exports = {
+  lockedSettings,
+  config: {
+    name: "lockgroup",
+    version: "1.0.0",
+    credits: "ChatGPT",
+    description: "Lock group name and photo"
+  },
+  run: async ({ api, event, args }) => {
+    const threadID = event.threadID;
 
-  if (!sub) return api.sendMessage(
-    "⚙ Usage:\nlockgroup name <groupName>\nlockgroup photo\nlockgroup reset",
-    threadID, messageID
-  );
+    if (!args[0]) return api.sendMessage("Usage: /lock name | photo | all", threadID);
 
-  if (sub === "name") {
-    const name = args.slice(1).join(" ");
-    if (!name) return api.sendMessage("❗ Provide a group name!", threadID, messageID);
-    lockedSettings[threadID] = { ...lockedSettings[threadID], name };
-    await api.setTitle(name, threadID);
-    return api.sendMessage(`🔒 Group name locked: ${name}`, threadID, messageID);
-  }
+    if (!lockedSettings[threadID]) lockedSettings[threadID] = {};
 
-  if (sub === "photo") {
-    const path = __dirname + `/cache/${threadID}.png`;
-    if (event.messageReply && event.messageReply.attachments.length > 0) {
-      const url = event.messageReply.attachments[0].url;
-      const stream = (await require("axios").get(url, { responseType: "arraybuffer" })).data;
-      fs.writeFileSync(path, Buffer.from(stream));
-      lockedSettings[threadID] = { ...lockedSettings[threadID], image: path };
-      return api.sendMessage("🔒 Group photo locked.", threadID, messageID);
+    if (args[0] === "name" || args[0] === "all") {
+      const info = await api.getThreadInfo(threadID);
+      lockedSettings[threadID].name = info.threadName;
+      api.sendMessage(`🔒 Locked group name: ${info.threadName}`, threadID);
     }
-    return api.sendMessage("❗ Reply to an image to lock it as group photo.", threadID, messageID);
-  }
 
-  if (sub === "reset") {
-    delete lockedSettings[threadID];
-    return api.sendMessage("🔓 Lock removed.", threadID, messageID);
+    if (args[0] === "photo" || args[0] === "all") {
+      const imgPath = path.join(__dirname, `cache/${threadID}.png`);
+      const info = await api.getThreadInfo(threadID);
+
+      if (info.imageSrc) {
+        const axios = require("axios");
+        const res = await axios.get(info.imageSrc, { responseType: "arraybuffer" });
+        fs.writeFileSync(imgPath, Buffer.from(res.data, "binary"));
+
+        lockedSettings[threadID].image = imgPath;
+        api.sendMessage(`🔒 Locked group photo saved.`, threadID);
+      } else {
+        api.sendMessage("⚠ Walang group photo para i-lock.", threadID);
+      }
+    }
   }
 };
-
-module.exports.lockedSettings = lockedSettings;
