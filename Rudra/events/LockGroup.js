@@ -1,48 +1,34 @@
 const fs = require("fs");
-const { lockedSettings } = require("../commands/lockgroup.js"); // adjust path kung iba
+const { lockedSettings, saveData } = require("../commands/lockgroup.js");
 
 module.exports.config = {
   name: "lockgroupEvent",
-  eventType: ["log:thread-name", "log:thread-icon", "log:thread-image"],
-  version: "1.2.0",
+  eventType: ["log:thread-name", "log:thread-icon"],
+  version: "1.0.0",
   credits: "ChatGPT",
-  description: "Auto-restore locked group name & photo"
+  description: "Auto-revert group name & photo when locked"
 };
 
 module.exports.run = async ({ api, event }) => {
-  const { threadID, logMessageType, logMessageData } = event;
-
-  // skip kung walang naka-lock sa group na 'to
-  if (!lockedSettings[threadID]) return;
+  const { threadID, logMessageType } = event;
   const locked = lockedSettings[threadID];
+  if (!locked) return;
 
   try {
-    // 🔹 Restore name kung binago
-    if (logMessageType === "log:thread-name") {
-      if (locked.name && logMessageData?.name !== locked.name) {
-        try {
-          await api.setTitle(locked.name, threadID);
-          return api.sendMessage(`⏪ Restored locked group name: "${locked.name}"`, threadID);
-        } catch (err) {
-          console.error("❌ Error restoring name:", err);
-          return api.sendMessage("⚠ Bot is not admin. Cannot restore group name!", threadID);
-        }
-      }
+    // restore locked name
+    if (logMessageType === "log:thread-name" && locked.name) {
+      await api.setTitle(locked.name, threadID);
+      api.sendMessage(`⚠️ Group name is locked to: "${locked.name}"`, threadID);
     }
 
-    // 🔹 Restore photo kung binago
-    if (logMessageType === "log:thread-icon" || logMessageType === "log:thread-image") {
-      if (locked.image && fs.existsSync(locked.image)) {
-        try {
-          await api.changeGroupImage(fs.createReadStream(locked.image), threadID);
-          return api.sendMessage("⏪ Restored locked group photo.", threadID);
-        } catch (err) {
-          console.error("❌ Error restoring photo:", err);
-          return api.sendMessage("⚠ Bot is not admin. Cannot restore group photo!", threadID);
-        }
+    // restore locked photo
+    if (logMessageType === "log:thread-icon" && locked.image) {
+      if (fs.existsSync(locked.image)) {
+        await api.changeGroupImage(fs.createReadStream(locked.image), threadID);
+        api.sendMessage("⚠️ Group photo is locked!", threadID);
       }
     }
   } catch (err) {
-    console.error("❌ Event handler error:", err);
+    console.error("Error restoring group setting:", err);
   }
 };
