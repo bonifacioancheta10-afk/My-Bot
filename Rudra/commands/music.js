@@ -4,7 +4,7 @@ const path = require("path");
 
 module.exports.config = {
   name: "music",
-  version: "1.1.0",
+  version: "1.2.0",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Search and play music from YouTube",
@@ -22,7 +22,7 @@ module.exports.run = async function ({ api, event, args }) {
   const query = args.join(" ");
 
   try {
-    // 🔍 Step 1: Search
+    // 🔍 Step 1: Search YouTube
     const searchUrl = `https://daikyu-api.up.railway.app/api/ytsearch?query=${encodeURIComponent(query)}`;
     const searchRes = await axios.get(searchUrl);
     const data = searchRes.data;
@@ -36,32 +36,31 @@ module.exports.run = async function ({ api, event, args }) {
     // 🎶 Step 2: Download MP3
     const downloadUrl = `https://daikyu-api.up.railway.app/api/ytmp3?Url=${encodeURIComponent(firstResult.url)}`;
     const dlRes = await axios.get(downloadUrl);
-
     if (!dlRes.data || !dlRes.data.download) {
-      return api.sendMessage("⚠️ Failed to download the song.", threadID, messageID);
+      return api.sendMessage("⚠️ Failed to get download link.", threadID, messageID);
     }
 
     const mp3Url = dlRes.data.download;
     const filePath = path.join(__dirname, "music.mp3");
 
-    // Download and save locally
+    // ⬇️ Step 3: Download file
     const response = await axios.get(mp3Url, { responseType: "arraybuffer" });
     fs.writeFileSync(filePath, response.data);
 
-    // 📤 Send file to GC
+    // 📤 Step 4: Send to GC
     api.sendMessage(
       {
-        body: `🎵 Now Playing: ${firstResult.title}\n⏱ Duration: ${firstResult.duration}`,
+        body: `🎵 Now Playing: ${dlRes.data.title || firstResult.title}\n⏱ Duration: ${firstResult.duration}`,
         attachment: fs.createReadStream(filePath)
       },
       threadID,
       () => {
-        fs.unlinkSync(filePath); // delete temp file after sending
+        fs.unlinkSync(filePath); // delete temp file
       }
     );
 
   } catch (err) {
-    console.error("❌ Music Command Error:", err);
+    console.error("❌ Music Command Error:", err.message);
     return api.sendMessage("⚠️ Cannot connect to music API right now.", threadID, messageID);
   }
 };
