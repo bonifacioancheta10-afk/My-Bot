@@ -34,7 +34,7 @@ function saveShop(data) {
 
 module.exports.config = {
   name: "shop",
-  version: "12.0.0",
+  version: "13.0.0",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Auto Shop system (post every 20 minutes in current GC only)",
@@ -42,6 +42,8 @@ module.exports.config = {
   usages: "/shop add <details> | /shop remove | /shop list",
   cooldowns: 5,
 };
+
+let nextPostTime = null; // global tracker para sa next post
 
 module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID } = event;
@@ -73,6 +75,16 @@ module.exports.run = async function ({ api, event, args, Users }) {
       const fbLink = `https://www.facebook.com/profile.php?id=${s.seller}`;
       listMsg += `${i + 1}. 👤 ${s.name}\n🔗 FB: ${fbLink}\n📦 ${s.details.join(", ")}\n💰 Balance: ${bal.toLocaleString()} coins\n\n`;
     });
+
+    if (nextPostTime) {
+      const timeString = nextPostTime.toLocaleTimeString("en-PH", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true
+      });
+      listMsg += `\n⏰ Next auto post: ${timeString}`;
+    }
+
     return api.sendMessage(listMsg, threadID);
   }
 
@@ -82,7 +94,7 @@ module.exports.run = async function ({ api, event, args, Users }) {
       return api.sendMessage("❌ Usage: /shop add <details>", threadID);
     }
 
-    // details can be multiple lines
+    // details can be multiple lines or comma-separated
     const detailsText = args.slice(1).join(" ");
     const details = detailsText.split(/\n|,/).map(d => d.trim()).filter(Boolean);
 
@@ -127,12 +139,8 @@ module.exports.handleEvent = async function ({ api }) {
     let bank = loadBank();
     let shopData = loadShop();
 
-    const nextTime = new Date(Date.now() + 20 * 60 * 1000);
-    const timeString = nextTime.toLocaleTimeString("en-PH", {
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true
-    });
+    // compute next post time
+    nextPostTime = new Date(Date.now() + 20 * 60 * 1000);
 
     for (const threadID of Object.keys(shopData)) {
       if (!shopData[threadID].sellers || shopData[threadID].sellers.length === 0) continue;
@@ -157,6 +165,12 @@ module.exports.handleEvent = async function ({ api }) {
       });
 
       if (stillActive.length > 0) {
+        const timeString = nextPostTime.toLocaleTimeString("en-PH", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true
+        });
+
         postMessage += `👉 Want to sell too?\nType: /shop add <details> (50 coins every 20 mins)\n\n⏰ Next post: ${timeString}`;
         api.sendMessage(postMessage, threadID);
       }
