@@ -1,34 +1,41 @@
 const fs = require("fs");
-const { lockedSettings, saveData } = require("../commands/lockgroup.js");
+const path = require("path");
 
 module.exports.config = {
-  name: "lockgroupEvent",
-  eventType: ["log:thread-name", "log:thread-icon"],
-  version: "1.0.0",
-  credits: "ChatGPT",
-  description: "Auto-revert group name & photo when locked"
+    name: "lockgroupUpdate",
+    eventType: ["log:thread-name", "log:thread-icon"],
+    version: "1.0.0",
+    author: "ChatGPT",
+    description: "Auto-restore locked group name or photo"
 };
 
-module.exports.run = async ({ api, event }) => {
-  const { threadID, logMessageType } = event;
-  const locked = lockedSettings[threadID];
-  if (!locked) return;
+const lockFile = path.join(__dirname, "lockData.json");
 
-  try {
-    // restore locked name
-    if (logMessageType === "log:thread-name" && locked.name) {
-      await api.setTitle(locked.name, threadID);
-      api.sendMessage(`⚠️ Group name is locked to: "${locked.name}"`, threadID);
+function getLockData() {
+    if (!fs.existsSync(lockFile)) return {};
+    return JSON.parse(fs.readFileSync(lockFile, "utf8"));
+}
+
+module.exports.run = async function({ api, event }) {
+    const { threadID, logMessageType } = event;
+    const data = getLockData();
+
+    if (!data[threadID]) return;
+
+    // restore name
+    if (logMessageType === "log:thread-name" && data[threadID].name) {
+        try {
+            await api.setTitle(data[threadID].name, threadID);
+            api.sendMessage(`⚠️ Group name is locked to: "${data[threadID].name}"`, threadID);
+        } catch (e) {}
     }
 
-    // restore locked photo
-    if (logMessageType === "log:thread-icon" && locked.image) {
-      if (fs.existsSync(locked.image)) {
-        await api.changeGroupImage(fs.createReadStream(locked.image), threadID);
-        api.sendMessage("⚠️ Group photo is locked!", threadID);
-      }
+    // restore photo
+    if (logMessageType === "log:thread-icon" && data[threadID].photo) {
+        try {
+            const photoStream = fs.createReadStream(data[threadID].photo);
+            await api.changeGroupImage(photoStream, threadID);
+            api.sendMessage("🖼️ Group photo is locked!", threadID);
+        } catch (e) {}
     }
-  } catch (err) {
-    console.error("Error restoring group setting:", err);
-  }
 };
