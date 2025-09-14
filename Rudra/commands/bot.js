@@ -2,7 +2,7 @@ const axios = require("axios");
 
 module.exports.config = {
   name: "bot",
-  version: "3.0.1",
+  version: "3.0.2",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Chat with GPT-5 (stable, no history)",
@@ -34,10 +34,8 @@ module.exports.handleEvent = async function ({ api, event }) {
   }
 };
 
-// 🔹 GPT-5 API handler (no history)
+// 🔹 GPT-5 API handler (no history, no reaction)
 async function gptReply(api, event, userMessage) {
-  api.setMessageReaction("🤖", event.messageID, () => {}, true);
-
   let reply = null;
   try {
     const res = await axios.get("https://daikyu-api.up.railway.app/api/openai-gpt-5", {
@@ -58,6 +56,5 @@ async function gptReply(api, event, userMessage) {
     reply = "❌ I can’t connect to GPT right now.";
   }
 
-  api.setMessageReaction("✅", event.messageID, () => {}, true);
   return api.sendMessage(reply, event.threadID, event.messageID);
 }
