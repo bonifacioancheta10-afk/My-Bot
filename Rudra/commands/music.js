@@ -1,64 +1,55 @@
-const axios = require("axios");
-const fs = require("fs");
-const path = require("path");
-
 module.exports.config = {
   name: "music",
-  version: "1.3.3",
+  version: "1.0.0",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Search and play music from YouTube",
+  description: "Play or download music via API",
   commandCategory: "media",
   usages: "/music <song name>",
-  cooldowns: 5
+  cooldowns: 3
 };
 
-module.exports.run = async function ({ api, event, args }) {
+const axios = require("axios");
+const fs = require("fs-extra");
+const path = require("path");
+
+module.exports.run = async function({ api, event, args }) {
   const { threadID, messageID } = event;
+
   if (!args[0]) {
-    return api.sendMessage("❌ Please provide a song name.\nUsage: /music <song name>", threadID, messageID);
+    return api.sendMessage("❌ Please provide a song name.\n\nExample: /music Ikaw by Yeng", threadID, messageID);
   }
 
-  const query = args.join(" ");
-  api.sendMessage(`⏳ Searching and downloading "${query}", please wait...`, threadID, messageID);
+  const query = encodeURIComponent(args.join(" "));
+  const url = `https://betadash-api-swordslush-production.up.railway.app/sc?search=${query}`;
+
+  const filePath = path.join(__dirname, "cache", `music_${Date.now()}.mp3`);
 
   try {
-    // 🔍 Step 1: Search
-    const searchRes = await axios.get(`https://daikyu-api.up.railway.app/api/ytsearch?query=${encodeURIComponent(query)}`);
-    if (!searchRes.data.results?.length) {
-      return api.sendMessage("⚠️ No results found.", threadID, messageID);
-    }
-    const firstResult = searchRes.data.results[0];
+    api.sendMessage(`🔎 Searching for: "${args.join(" ")}"...\n⏳ Please wait...`, threadID, messageID);
 
-    // 🎶 Step 2: Get MP3 link
-    const dlRes = await axios.get(`https://daikyu-api.up.railway.app/api/ytmp3?Url=${encodeURIComponent(firstResult.url)}`);
-    const info = dlRes.data;
-    const mp3Url = info.download;
+    const response = await axios({
+      url,
+      method: "GET",
+      responseType: "stream"
+    });
 
-    if (!mp3Url) {
-      return api.sendMessage("⚠️ Music API did not return a download link.", threadID, messageID);
-    }
+    const writer = fs.createWriteStream(filePath);
+    response.data.pipe(writer);
 
-    // 📂 File path
-    const safeTitle = (info.title || firstResult.title || "music").replace(/[\\/:*?"<>|]/g, "");
-    const filePath = path.join(__dirname, `${safeTitle}.mp3`);
-
-    // ⬇️ Download MP3
-    const response = await axios.get(mp3Url, { responseType: "arraybuffer" });
-    fs.writeFileSync(filePath, response.data);
-
-    // 📤 Send file
-    api.sendMessage(
-      {
-        body: `🎵 Now Playing: ${info.title || firstResult.title}\n⏱ Duration: ${firstResult.duration || "Unknown"}`,
+    writer.on("finish", () => {
+      api.sendMessage({
+        body: `🎶 Here's your music:\n${args.join(" ")}`,
         attachment: fs.createReadStream(filePath)
-      },
-      threadID,
-      () => fs.unlinkSync(filePath)
-    );
+      }, threadID, () => fs.unlinkSync(filePath));
+    });
+
+    writer.on("error", () => {
+      api.sendMessage("⚠️ Failed to download the music. Please try again.", threadID, messageID);
+    });
 
   } catch (err) {
-    console.error("❌ Music Command Error:", err);
-    return api.sendMessage("⚠️ Cannot connect to music API right now.", threadID, messageID);
+    console.error(err);
+    return api.sendMessage("❌ Error fetching the music. Try another keyword.", threadID, messageID);
   }
 };
