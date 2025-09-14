@@ -1,22 +1,45 @@
 module.exports.config = {
- name: "antirobbery",
- version: "1.0.0",
- credits: "𝐏𝐫𝐢𝐲𝐚𝐧𝐬𝐡 𝐑𝐚𝐣𝐩𝐮𝐭",
- hasPermssion: 1,
- description: "Prevent changing group administrators",
- usages: "",
- commandCategory: "Box Chat",
- cooldowns: 0
+    name: "antirobbery",
+    version: "1.1.0",
+    credits: "Priyansh Rajput + Modified by ChatGPT",
+    hasPermssion: 1,
+    description: "Toggle Anti-Robbery (Prevent changing group admins)",
+    usages: "/antirobbery",
+    commandCategory: "moderation",
+    cooldowns: 3
 };
 
-module.exports.run = async({ api, event, Threads}) => {
-    const info = await api.getThreadInfo(event.threadID);
-    if (!info.adminIDs.some(item => item.id == api.getCurrentUserID())) 
-      return api.sendMessage('Need group administrator permissions, please add and try again!', event.threadID, event.messageID);
-    const data = (await Threads.getData(event.threadID)).data || {};
-    if (typeof data["guard"] == "guard" || data["guard"] == false) data["guard"] = true;
-    else data["guard"] = false;
-    await Threads.setData(event.threadID, { data });
-      global.data.threadData.set(parseInt(event.threadID), data);
-    return api.sendMessage(`${(data["guard"] == true) ? "turn on" : "Turn off"} Successful Anti-Robbery Group`, event.threadID, event.messageID);
-}
+module.exports.languages = {
+    "en": {
+        "needAdmin": "⚠️ I need group admin permissions. Please add me as admin and try again.",
+        "turnedOn": "✅ Anti-Robbery has been **enabled**. Group admin changes are now protected.",
+        "turnedOff": "❌ Anti-Robbery has been **disabled**. Group admin changes are no longer protected.",
+        "errorUsage": "⚠️ Wrong usage of /antirobbery.\n\n👉 Correct usage:\n/antirobbery"
+    }
+};
+
+module.exports.run = async ({ api, event, Threads, getText }) => {
+    const { threadID, messageID } = event;
+
+    // Check if bot is admin
+    const info = await api.getThreadInfo(threadID);
+    if (!info.adminIDs.some(item => item.id == api.getCurrentUserID())) {
+        return api.sendMessage(getText("needAdmin"), threadID, messageID);
+    }
+
+    // Get thread data
+    const data = (await Threads.getData(threadID)).data || {};
+
+    // Toggle guard
+    if (typeof data["guard"] !== "boolean" || data["guard"] === false) {
+        data["guard"] = true;
+        await Threads.setData(threadID, { data });
+        global.data.threadData.set(parseInt(threadID), data);
+        return api.sendMessage(getText("turnedOn"), threadID, messageID);
+    } else {
+        data["guard"] = false;
+        await Threads.setData(threadID, { data });
+        global.data.threadData.set(parseInt(threadID), data);
+        return api.sendMessage(getText("turnedOff"), threadID, messageID);
+    }
+};
