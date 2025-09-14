@@ -1,9 +1,9 @@
 module.exports.config = {
   name: "autobible",
-  version: "2.0.0",
+  version: "2.1.0",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Automatically sends Bible verses at specific times",
+  description: "Automatically sends Bible verses at specific Philippine times",
   commandCategory: "system",
   usages: "/autobible",
   cooldowns: 0
@@ -17,6 +17,7 @@ function sleep(ms) {
   return new Promise(res => setTimeout(res, ms));
 }
 
+// ⏰ Get PH Time (UTC+8)
 function getPhilTime() {
   const now = new Date();
   const utc = now.getTime() + now.getTimezoneOffset() * 60000;
@@ -24,7 +25,7 @@ function getPhilTime() {
   return new Date(utc + offset);
 }
 
-// Mga oras + dagdag na mensahe
+// 📌 Schedule (oras + dagdag na mensahe)
 const verseSchedule = {
   "4:0": "🌅 Good morning! Start your day with God’s word.",
   "8:0": "☀️ Start your day with faith and strength!",
@@ -34,34 +35,41 @@ const verseSchedule = {
   "22:0": "🌙 Good night, rest in His peace."
 };
 
-// 🔹 Manual command
+// 🔹 Manual Command (/autobible)
 module.exports.run = async function ({ api, event }) {
-  return api.sendMessage(
-    "📖 AutoBible is automatic. Verses will be posted at:\n\n⏰ 4:00 AM - Good Morning\n⏰ 8:00 AM\n⏰ 12:00 PM\n⏰ 3:00 PM\n⏰ 7:00 PM\n⏰ 10:00 PM\n\n(Timezone: Philippines UTC+8)",
-    event.threadID,
-    event.messageID
-  );
+  const msg = 
+`📖 AutoBible is automatic. Verses will be posted at:
+
+⏰ 4:00 AM
+⏰ 8:00 AM
+⏰ 12:00 PM
+⏰ 3:00 PM
+⏰ 7:00 PM
+⏰ 10:00 PM
+
+(Timezone: Philippines UTC+8)`;
+
+  return api.sendMessage(msg, event.threadID, event.messageID);
 };
 
-// 🔹 Autostart
+// 🔹 Autostart loop
 module.exports.onLoad = function ({ api }) {
   console.log("✅ AutoBible loaded.");
 
-  if (autoBibleInterval) return;
+  if (autoBibleInterval) return; // avoid double start
 
   autoBibleInterval = setInterval(async () => {
     try {
       const now = getPhilTime();
       const hour = now.getHours();
       const minute = now.getMinutes();
-
       const key = `${hour}:${minute}`;
-      if (!verseSchedule[key]) return;
 
-      if (lastSentKey === key) return; // Huwag ulit-ulitin
+      if (!verseSchedule[key]) return; // only on schedule
+      if (lastSentKey === key) return; // avoid duplicate within same minute
       lastSentKey = key;
 
-      // Fetch verse galing API
+      // 📖 Fetch random verse
       let verseText = "";
       try {
         const res = await axios.get("https://labs.bible.org/api/?passage=random&type=json");
@@ -76,7 +84,7 @@ module.exports.onLoad = function ({ api }) {
 
       const finalMsg = `📖 ${verseText}\n\n${verseSchedule[key]}`;
 
-      // Send sa lahat ng groups
+      // 📤 Send to all groups
       let threads = [];
       try {
         threads = await api.getThreadList(50, null, ["INBOX"]);
@@ -92,11 +100,11 @@ module.exports.onLoad = function ({ api }) {
         await sleep(500);
       }
 
-      console.log(`✅ Sent AutoBible at ${key}`);
+      console.log(`✅ Sent AutoBible verse at ${key}`);
     } catch (err) {
       console.error("❌ AutoBible error:", err.message);
     }
-  }, 30 * 1000); // Check every 30s
+  }, 30 * 1000); // check every 30s
 };
 
 module.exports.onUnload = function () {
