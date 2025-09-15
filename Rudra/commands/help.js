@@ -1,8 +1,8 @@
 module.exports.config = {
   name: "help",
-  version: "3.7.1",
+  version: "3.8.0",
   hasPermssion: 0,
-  credits: "ChatGPT",
+  credits: "ChatGPT + Edited by Jaylord",
   description: "Show all available commands grouped by category with styled brackets",
   commandCategory: "system",
   usages: "/help [command]",
@@ -41,20 +41,30 @@ module.exports.run = async function ({ api, event, args }) {
     "image": "🖼️",
     "tools": "🛠️",
     "gag tools": "😂",
+    "ai": "🤖",
     "others": "📦"
   };
 
-  // 📌 Group commands per category
+  // 📌 Group commands per category (case-insensitive)
   let categorized = {};
   commands.forEach(cmd => {
     const cfg = cmd.config;
-    const category = cfg.commandCategory?.toLowerCase() || "others";
+    let category = (cfg.commandCategory || "others").toLowerCase();
+
+    // 🔎 Auto-detect AI-related commands
+    if (
+      ["ai", "chatgpt", "gpt", "ask"].includes(cfg.name.toLowerCase()) || 
+      category.includes("ai")
+    ) {
+      category = "ai";
+    }
+
     if (!categorized[category]) categorized[category] = [];
     categorized[category].push(cfg);
   });
 
   // 📌 Build Help Menu (bracket style + slash)
-  let helpMenu = "Available Commands:\n\n";
+  let helpMenu = "📌 Available Commands:\n\n";
 
   for (const [category, cmds] of Object.entries(categorized)) {
     const icon = categoryIcons[category] || "📦";
