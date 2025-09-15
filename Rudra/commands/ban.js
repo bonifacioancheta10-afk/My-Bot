@@ -4,7 +4,7 @@ const { Ban } = initModels({ sequelize }); // ✅ wala nang .model
 
 module.exports.config = {
   name: "ban",
-  version: "3.0.1",
+  version: "3.0.2",
   hasPermssion: 1,
   credits: "Modified by ChatGPT",
   description: "Ban system with DB (kick + save reason)",
@@ -38,9 +38,9 @@ module.exports.run = async function ({ api, event, args }) {
     if (!bans.length) return api.sendMessage("✅ Walang naka-ban sa thread na ito.", threadID, messageID);
 
     let msg = "📋 Listahan ng mga naka-ban:\n";
-    for (const b of bans) {
-      msg += `- UID: ${b.userID} | Reason: ${b.reason || "No reason"}\n`;
-    }
+    bans.forEach((b, i) => {
+      msg += `${i + 1}. UID: ${b.userID} | Reason: ${b.reason || "No reason"}\n`;
+    });
     return api.sendMessage(msg, threadID, messageID);
   }
 
@@ -58,7 +58,7 @@ module.exports.run = async function ({ api, event, args }) {
     const unban = await Ban.destroy({ where: { threadID, userID } });
     if (!unban) return api.sendMessage("⚠️ Walang ban record para sa user na ito.", threadID, messageID);
 
-    return api.sendMessage(`✅ Natanggal na ang ban kay ${mentions[userID]}`, threadID, messageID);
+    return api.sendMessage(`✅ Natanggal na ang ban kay ${mentions[userID] || userID}`, threadID, messageID);
   }
 
   // 📌 /ban @mention reason
@@ -67,15 +67,21 @@ module.exports.run = async function ({ api, event, args }) {
   const userID = Object.keys(mentions)[0];
   const reason = args.slice(1).join(" ") || "No reason";
 
-  await Ban.create({
-    userID,
-    threadID,
-    reason
-  });
+  // 🚫 Check kung naka-ban na
+  const alreadyBanned = await Ban.findOne({ where: { userID, threadID } });
+  if (alreadyBanned) {
+    return api.sendMessage(
+      `⚠️ Naka-ban na si ${mentions[userID] || userID}.\nReason: ${alreadyBanned.reason}`,
+      threadID,
+      messageID
+    );
+  }
+
+  await Ban.create({ userID, threadID, reason });
 
   api.removeUserFromGroup(userID, threadID, (err) => {
     if (err) return api.sendMessage("⚠️ Hindi na-kick ang user (baka admin siya o may error).", threadID, messageID);
-    return api.sendMessage(`✅ User ${mentions[userID]} ay na-ban!\nReason: ${reason}`, threadID, messageID);
+    return api.sendMessage(`✅ User ${mentions[userID] || userID} ay na-ban!\nReason: ${reason}`, threadID, messageID);
   });
 };
 
