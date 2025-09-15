@@ -1,4 +1,7 @@
 // === modules/commands/lockgroup.js ===
+const db = require("../../database");
+const { LockGroup } = db;
+
 module.exports.config = {
   name: "lockgroup",
   version: "2.0.1",
@@ -9,9 +12,8 @@ module.exports.config = {
   usages: "/lockgroup name | /lockgroup remove"
 };
 
-module.exports.run = async function({ api, event, args, models }) {
+module.exports.run = async function ({ api, event, args }) {
   const { threadID, messageID } = event;
-  const { LockGroup } = models;
 
   if (!args[0]) {
     return api.sendMessage("❗ Usage: /lockgroup name | remove", threadID, messageID);
@@ -20,7 +22,11 @@ module.exports.run = async function({ api, event, args, models }) {
   if (args[0] === "name") {
     const info = await api.getThreadInfo(threadID);
     await LockGroup.upsert({ threadID, name: info.threadName });
-    return api.sendMessage(`🔒 Group name is now locked to: "${info.threadName}"`, threadID, messageID);
+    return api.sendMessage(
+      `🔒 Group name is now locked to: "${info.threadName}"`,
+      threadID,
+      messageID
+    );
   }
 
   if (args[0] === "remove") {
@@ -32,11 +38,10 @@ module.exports.run = async function({ api, event, args, models }) {
 };
 
 // === Auto enforce lock ===
-module.exports.handleEvent = async function({ api, event, models }) {
+module.exports.handleEvent = async function ({ api, event }) {
   const { threadID } = event;
   if (!threadID) return;
 
-  const { LockGroup } = models;
   const record = await LockGroup.findOne({ where: { threadID } });
   if (!record || !record.name) return;
 
