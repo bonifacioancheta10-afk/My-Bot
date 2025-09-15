@@ -1,7 +1,7 @@
-// modules/commands/rules.js
+// === modules/commands/rules.js ===
 module.exports.config = {
   name: "rules",
-  version: "1.0.0",
+  version: "1.0.1",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Manage group rules (per GC, saved in DB)",
@@ -10,13 +10,13 @@ module.exports.config = {
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args }) {
+module.exports.run = async function ({ api, event, args, models }) {
   const { threadID, messageID } = event;
-  const Rules = global.db.use("Rules");
+  const { Rules } = models;
 
   const sub = args[0]?.toLowerCase();
 
-  // Show all rules
+  // 📌 Show all rules
   if (!sub) {
     const rules = await Rules.findAll({ where: { threadID } });
 
@@ -32,7 +32,7 @@ module.exports.run = async function ({ api, event, args }) {
     return api.sendMessage(msg, threadID, messageID);
   }
 
-  // Add new rule
+  // 📌 Add new rule
   if (sub === "add") {
     const text = args.slice(1).join(" ");
     if (!text) {
@@ -43,7 +43,7 @@ module.exports.run = async function ({ api, event, args }) {
     return api.sendMessage(`✅ Rule added: "${text}"`, threadID, messageID);
   }
 
-  // Remove rule
+  // 📌 Remove rule
   if (sub === "remove") {
     const index = parseInt(args[1]);
     if (isNaN(index)) {
@@ -62,6 +62,10 @@ module.exports.run = async function ({ api, event, args }) {
     return api.sendMessage(`🗑️ Removed rule #${index}: "${toDelete.rule}"`, threadID, messageID);
   }
 
-  // Invalid usage
-  return api.sendMessage("❌ Usage: /rules | /rules add <text> | /rules remove <number>", threadID, messageID);
+  // 📌 Invalid usage
+  return api.sendMessage(
+    "❌ Usage: /rules | /rules add <text> | /rules remove <number>",
+    threadID,
+    messageID
+  );
 };
