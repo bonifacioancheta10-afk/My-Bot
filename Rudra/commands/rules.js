@@ -1,7 +1,10 @@
 // === modules/commands/rules.js ===
+const db = require("../../database");
+const { Rules } = db;
+
 module.exports.config = {
   name: "rules",
-  version: "1.0.1",
+  version: "1.0.2",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Manage group rules (per GC, saved in DB)",
@@ -10,10 +13,8 @@ module.exports.config = {
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args, models }) {
+module.exports.run = async function ({ api, event, args }) {
   const { threadID, messageID } = event;
-  const { Rules } = models;
-
   const sub = args[0]?.toLowerCase();
 
   // 📌 Show all rules
