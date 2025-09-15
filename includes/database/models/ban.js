@@ -1,19 +1,20 @@
+// models/ban.js
 const { DataTypes } = require("sequelize");
 
-module.exports = (sequelize, DataTypes) => {
+module.exports = (sequelize) => {
   const Ban = sequelize.define("Ban", {
     userID: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     threadID: {
       type: DataTypes.STRING,
-      allowNull: false
+      allowNull: false,
     },
     reason: {
       type: DataTypes.TEXT,
-      allowNull: true
-    }
+      allowNull: true,
+    },
   });
 
   return Ban;
