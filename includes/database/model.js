@@ -7,7 +7,8 @@ module.exports = function (input) {
   const Bans = require("./models/ban")(input);
   const Bank = require("./models/bank")(input);
   const Shop = require("./models/shop")(input);
-  const Check = require("./models/check")(input);   // ✅ Check model
+  const Check = require("./models/check")(input);
+  const LockGroup = require("./models/lockGroup")(input); // ✅
 
   Users.sync({ force });
   Threads.sync({ force });
@@ -16,6 +17,7 @@ module.exports = function (input) {
   Bank.sync({ force });
   Shop.sync({ force });
   Check.sync({ force });
+  LockGroup.sync({ force }); // ✅
 
   return {
     model: {
@@ -25,7 +27,8 @@ module.exports = function (input) {
       Bans,
       Bank,
       Shop,
-      Check,   // ✅ expose Check
+      Check,
+      LockGroup, // ✅
     },
     use: function (modelName) {
       return this.model[`${modelName}`];
