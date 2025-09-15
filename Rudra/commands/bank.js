@@ -1,4 +1,8 @@
 // === modules/commands/bank.js ===
+const { sequelize } = require("../../database");
+const initModels = require("../../database/models");
+const models = initModels(sequelize);
+const { Bank } = models;
 
 module.exports.config = {
   name: "bank",
@@ -20,13 +24,12 @@ function formatBalance(user, balance) {
 }
 
 // 🔹 Auto add coins per normal message
-module.exports.handleEvent = async function ({ event, models }) {
+module.exports.handleEvent = async function ({ event, Users }) {
   const { senderID, body } = event;
   if (!senderID || !body) return;
 
   if (body.trim().startsWith("/")) return;
 
-  const Bank = models.use("Bank");
   const [account] = await Bank.findOrCreate({
     where: { userID: senderID },
     defaults: { balance: 0 }
@@ -37,9 +40,8 @@ module.exports.handleEvent = async function ({ event, models }) {
 };
 
 // 🔹 Run command
-module.exports.run = async function ({ api, event, args, Users, models }) {
+module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID } = event;
-  const Bank = models.use("Bank");
 
   const command = args[0]?.toLowerCase();
 
@@ -56,7 +58,7 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
     );
   }
 
-  // Show all accounts
+  // 📋 Show all accounts
   if (command === "all") {
     const accounts = await Bank.findAll();
     let arr = [];
@@ -81,7 +83,7 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
     return api.sendMessage(msg, threadID);
   }
 
-  // Admin add
+  // 🔑 Admin add coins
   if (command === "add") {
     if (!BOT_ADMINS.includes(senderID)) {
       return api.sendMessage("❌ Only bot admins can add coins.", threadID);
@@ -115,7 +117,7 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
     );
   }
 
-  // Default → show own balance
+  // 📌 Default → show own balance
   const [account] = await Bank.findOrCreate({
     where: { userID: senderID },
     defaults: { balance: 0 }
