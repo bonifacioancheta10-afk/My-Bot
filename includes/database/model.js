@@ -4,14 +4,16 @@ module.exports = function (input) {
   const Users = require("./models/users")(input);
   const Threads = require("./models/threads")(input);
   const Currencies = require("./models/currencies")(input);
-  const Bank = require("./models/bank")(input);   // ✅ Bank model
-  const Ban = require("./models/ban")(input);     // ✅ Ban model
+  const Bank = require("./models/bank")(input);
+  const Ban = require("./models/ban")(input);
+  const Check = require("./models/check")(input);   // ✅ Added
 
   Users.sync({ force });
   Threads.sync({ force });
   Currencies.sync({ force });
   Bank.sync({ force });
   Ban.sync({ force });
+  Check.sync({ force });
 
   return {
     model: {
@@ -19,7 +21,8 @@ module.exports = function (input) {
       Threads,
       Currencies,
       Bank,
-      Ban
+      Ban,
+      Check
     },
     use: function (modelName) {
       return this.model[`${modelName}`];
