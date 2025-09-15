@@ -1,80 +1,67 @@
-const fs = require("fs");
-const path = require("path");
-
-const dataFile = path.join(__dirname, "bank.json");
-
-// Load bank
-function loadBank() {
-  try {
-    return JSON.parse(fs.readFileSync(dataFile, "utf8"));
-  } catch {
-    return {};
-  }
-}
-
-// Save bank
-function saveBank(data) {
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), "utf8");
-}
-
+// === modules/commands/slot.js ===
 module.exports.config = {
   name: "slot",
   version: "1.0.0",
   hasPermssion: 0,
   credits: "ChatGPT",
-  description: "Play slot machine with coins",
-  commandCategory: "Games",
+  description: "🎰 Slot machine game (bet your coins)",
+  commandCategory: "Economy",
   usages: "/slot <amount>",
-  cooldowns: 5,
+  cooldowns: 5
 };
 
-// Slot symbols
-const symbols = ["🍒", "🍋", "🍇", "🍀", "⭐", "💎"];
+const symbols = ["🍒", "🍋", "🍇", "🍉", "⭐", "7️⃣"];
 
-module.exports.run = async function ({ api, event, args, Users }) {
-  const { threadID, senderID } = event;
-  const bank = loadBank();
+module.exports.run = async function ({ api, event, args, models, Users }) {
+  const { threadID, senderID, messageID } = event;
+  const Bank = models.use("Bank");
 
-  if (!bank[senderID]) bank[senderID] = { balance: 0 };
-
+  // check bet amount
   const bet = parseInt(args[0]);
-  if (isNaN(bet) || bet <= 0) {
-    return api.sendMessage("❌ Usage: /slot <bet>", threadID);
+  if (!bet || bet <= 0) {
+    return api.sendMessage("❌ Usage: /slot <amount>", threadID, messageID);
   }
 
-  if (bank[senderID].balance < bet) {
-    return api.sendMessage("⚠️ You don't have enough coins!", threadID);
+  // fetch user account
+  let user = await Bank.findOne({ where: { userID: senderID } });
+  if (!user) {
+    user = await Bank.create({ userID: senderID, balance: 0 });
   }
 
-  // Deduct bet
-  bank[senderID].balance -= bet;
+  if (user.balance < bet) {
+    return api.sendMessage("💸 Not enough coins in your bank account.", threadID, messageID);
+  }
 
-  // Roll slots
-  const roll = [
+  // spin slots
+  const slotResult = [
     symbols[Math.floor(Math.random() * symbols.length)],
     symbols[Math.floor(Math.random() * symbols.length)],
-    symbols[Math.floor(Math.random() * symbols.length)],
+    symbols[Math.floor(Math.random() * symbols.length)]
   ];
 
-  let resultMsg = `🎰 SLOT MACHINE 🎰\n[ ${roll.join(" | ")} ]\n\n`;
-
-  // Check winnings
-  if (roll[0] === roll[1] && roll[1] === roll[2]) {
-    const win = bet * 5;
-    bank[senderID].balance += win;
-    resultMsg += `✨ JACKPOT! 3 in a row! You won 💰 ${win.toLocaleString()} coins.`;
-  } else if (roll[0] === roll[1] || roll[1] === roll[2] || roll[0] === roll[2]) {
-    const win = bet * 2;
-    bank[senderID].balance += win;
-    resultMsg += `✅ 2 matches! You won 💰 ${win.toLocaleString()} coins.`;
-  } else {
-    resultMsg += `❌ You lost your bet of ${bet.toLocaleString()} coins.`;
+  // check outcome
+  let win = 0;
+  if (slotResult[0] === slotResult[1] && slotResult[1] === slotResult[2]) {
+    if (slotResult[0] === "7️⃣") win = bet * 10; // Jackpot!
+    else win = bet * 5;
+  } else if (slotResult[0] === slotResult[1] || slotResult[1] === slotResult[2] || slotResult[0] === slotResult[2]) {
+    win = bet * 2; // 2 same
   }
 
-  saveBank(bank);
+  // update balance
+  let msg = `🎰 SLOT MACHINE 🎰\n[ ${slotResult.join(" | ")} ]\n\n`;
+  if (win > 0) {
+    user.balance = user.balance - bet + win;
+    msg += `✅ You won 💰 ${win.toLocaleString()} coins!\n`;
+  } else {
+    user.balance -= bet;
+    msg += `❌ You lost 💸 ${bet.toLocaleString()} coins.\n`;
+  }
+
+  await user.save();
 
   const name = await Users.getNameUser(senderID);
-  resultMsg += `\n\n👤 ${name}\n💳 Balance: ${bank[senderID].balance.toLocaleString()} coins`;
+  msg += `\n👤 ${name}\n💰 Current Balance: ${user.balance.toLocaleString()} coins`;
 
-  return api.sendMessage(resultMsg, threadID);
+  return api.sendMessage(msg, threadID, messageID);
 };
