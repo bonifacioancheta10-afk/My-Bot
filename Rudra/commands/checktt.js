@@ -1,6 +1,4 @@
-// === modules/commands/check.js ===
-const db = require("../../database"); // autoloader index.js
-const { Check } = db;
+const { Check } = global.models; // gamitin global models
 
 // 🔹 Function to convert count → rank
 function getRankName(count) {
