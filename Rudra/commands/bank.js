@@ -1,8 +1,6 @@
 // === modules/commands/bank.js ===
-const { sequelize } = require("../../database");
-const initModels = require("../../database/models");
-const models = initModels(sequelize);
-const { Bank } = models;
+const db = require("../../database"); // autoloader index.js
+const { Bank } = db;
 
 module.exports.config = {
   name: "bank",
