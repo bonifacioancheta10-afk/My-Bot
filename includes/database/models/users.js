@@ -1,21 +1,27 @@
-module.exports = function({ sequelize, Sequelize }) {
-	let Users = sequelize.define('Users', {
-		num: {
-			type: Sequelize.INTEGER,
-			primaryKey: true,
-			autoIncrement: true
-		},
-		userID: {
-			type: Sequelize.BIGINT,
-			unique: true
-		},
-        name: {
-            type: Sequelize.STRING
-        },
-		data: {
-			type: Sequelize.JSON
-		}
-	});
+// === models/users.js ===
+const { DataTypes } = require("sequelize");
 
-	return Users;
-}
+module.exports = (sequelize) => {
+  const Users = sequelize.define("Users", {
+    num: {
+      type: DataTypes.INTEGER,
+      primaryKey: true,
+      autoIncrement: true,
+    },
+    userID: {
+      type: DataTypes.BIGINT,
+      unique: true,
+      allowNull: false,
+    },
+    name: {
+      type: DataTypes.STRING,
+      allowNull: true,
+    },
+    data: {
+      type: DataTypes.JSON,
+      defaultValue: {},
+    },
+  });
+
+  return Users;
+};
