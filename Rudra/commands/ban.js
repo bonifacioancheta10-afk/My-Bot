@@ -1,10 +1,10 @@
 const { sequelize } = require("../../database");
-const Database = require("../../database/module");
-const { Ban } = new Database(sequelize).model;
+const initModels = require("../../database/model");
+const { Ban } = initModels({ sequelize }).model;
 
 module.exports.config = {
   name: "ban",
-  version: "3.0.0",
+  version: "3.0.1",
   hasPermssion: 1,
   credits: "Modified by ChatGPT",
   description: "Ban system with DB (kick + save reason)",
