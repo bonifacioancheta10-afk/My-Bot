@@ -1,6 +1,5 @@
 // === modules/commands/lockgroup.js ===
-const db = require("../../database");
-const { LockGroup } = db;
+const { LockGroup } = global.models;
 
 module.exports.config = {
   name: "lockgroup",
