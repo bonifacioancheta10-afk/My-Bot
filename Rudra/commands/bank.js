@@ -1,11 +1,13 @@
+// === modules/commands/bank.js ===
+
 module.exports.config = {
   name: "bank",
   version: "2.0.0",
   hasPermssion: 0,
   credits: "ChatGPT + Jaylord",
-  description: "Bank system with admin add, reset and auto earn feature",
+  description: "Bank system with admin add + earn per message (DB based)",
   commandCategory: "Economy",
-  usages: "/bank, /bank all, /bank add <uid> <amount>, /bank reset",
+  usages: "/bank, /bank all, /bank add <uid> <amount>",
   cooldowns: 3,
 };
 
@@ -17,36 +19,44 @@ function formatBalance(user, balance) {
   return `🏦 Bank Account 🏦\n\n👤 ${user}\n💰 Balance: ${balance.toLocaleString()} coins`;
 }
 
-// 🔹 Add 5 coins per normal message
-module.exports.handleEvent = async function ({ event }) {
+// 🔹 Auto add coins per normal message
+module.exports.handleEvent = async function ({ event, models }) {
   const { senderID, body } = event;
   if (!senderID || !body) return;
-  if (body.trim().startsWith("/")) return; // skip commands
 
-  const Bank = global.db.use("Bank");
+  if (body.trim().startsWith("/")) return;
 
-  let account = await Bank.findOne({ where: { userID: senderID } });
-  if (!account) {
-    account = await Bank.create({ userID: senderID, balance: 0 });
-  }
+  const Bank = models.use("Bank");
+  const [account] = await Bank.findOrCreate({
+    where: { userID: senderID },
+    defaults: { balance: 0 }
+  });
 
   account.balance += 5;
   await account.save();
 };
 
 // 🔹 Run command
-module.exports.run = async function ({ api, event, args, Users }) {
+module.exports.run = async function ({ api, event, args, Users, models }) {
   const { threadID, senderID } = event;
-  const Bank = global.db.use("Bank");
-
-  let account = await Bank.findOne({ where: { userID: senderID } });
-  if (!account) {
-    account = await Bank.create({ userID: senderID, balance: 0 });
-  }
+  const Bank = models.use("Bank");
 
   const command = args[0]?.toLowerCase();
 
-  // 🔹 Show all accounts
+  // ✅ Show usage guide if wrong command
+  const validArgs = ["", "all", "add"];
+  if (!validArgs.includes(command)) {
+    return api.sendMessage(
+      "❌ Invalid usage.\n\n" +
+      "📌 Correct Usage:\n" +
+      "• /bank → check your balance\n" +
+      "• /bank all → show all balances\n" +
+      "• /bank add <uid> <amount> → add coins (admin only)",
+      threadID
+    );
+  }
+
+  // Show all accounts
   if (command === "all") {
     const accounts = await Bank.findAll();
     let arr = [];
@@ -71,7 +81,7 @@ module.exports.run = async function ({ api, event, args, Users }) {
     return api.sendMessage(msg, threadID);
   }
 
-  // 🔹 Admin-only: add money
+  // Admin add
   if (command === "add") {
     if (!BOT_ADMINS.includes(senderID)) {
       return api.sendMessage("❌ Only bot admins can add coins.", threadID);
@@ -84,13 +94,13 @@ module.exports.run = async function ({ api, event, args, Users }) {
       return api.sendMessage("❌ Usage: /bank add <uid> <amount>", threadID);
     }
 
-    let targetAcc = await Bank.findOne({ where: { userID: targetUID } });
-    if (!targetAcc) {
-      targetAcc = await Bank.create({ userID: targetUID, balance: 0 });
-    }
+    const [account] = await Bank.findOrCreate({
+      where: { userID: targetUID },
+      defaults: { balance: 0 }
+    });
 
-    targetAcc.balance += amount;
-    await targetAcc.save();
+    account.balance += amount;
+    await account.save();
 
     let name;
     try {
@@ -105,17 +115,12 @@ module.exports.run = async function ({ api, event, args, Users }) {
     );
   }
 
-  // 🔹 Admin-only: reset all
-  if (command === "reset") {
-    if (!BOT_ADMINS.includes(senderID)) {
-      return api.sendMessage("❌ Only bot admins can reset the bank database.", threadID);
-    }
+  // Default → show own balance
+  const [account] = await Bank.findOrCreate({
+    where: { userID: senderID },
+    defaults: { balance: 0 }
+  });
 
-    await Bank.destroy({ where: {} }); // delete all records
-    return api.sendMessage("🔄 All bank accounts have been reset.", threadID);
-  }
-
-  // 🔹 Default: show own balance
   let name;
   try {
     name = await Users.getNameUser(senderID);
