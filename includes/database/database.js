@@ -4,13 +4,14 @@ const { Sequelize } = require("sequelize");
 
 const sequelize = new Sequelize({
   dialect: "sqlite",
-  storage: path.join(__dirname, "..", "data.sqlite"),
+  storage: path.join(__dirname, "..", "data.sqlite"), // file: /includes/data.sqlite
   logging: false
 });
 
 const db = {};
 const modelsDir = path.join(__dirname, "..", "models");
 
+// Load lahat ng models
 fs.readdirSync(modelsDir)
   .filter(file => file.endsWith(".js"))
   .forEach(file => {
@@ -21,4 +22,14 @@ fs.readdirSync(modelsDir)
 db.sequelize = sequelize;
 db.Sequelize = Sequelize;
 
-module.exports = db;
+// Ito yung function na tatawagin sa rudra.js
+async function connectDB() {
+  try {
+    await sequelize.sync();
+    return db; // ibabalik lahat ng models + sequelize instance
+  } catch (err) {
+    throw err;
+  }
+}
+
+module.exports = { connectDB };
