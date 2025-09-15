@@ -1,8 +1,10 @@
 // === modules/commands/shop.js ===
+const db = require("../../database");
+const { Shop, Bank } = db;
 
 module.exports.config = {
   name: "shop",
-  version: "2.0.1",
+  version: "2.0.2",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Auto Shop system (per GC, every 20 minutes)",
@@ -14,10 +16,8 @@ module.exports.config = {
 let nextPostTime = null;
 let started = false;
 
-module.exports.run = async function ({ api, event, args, Users, models }) {
+module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID } = event;
-  const { Shop, Bank } = models;
-
   const sub = args[0]?.toLowerCase();
 
   // ❌ Wrong usage → show guide
@@ -100,11 +100,9 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
 };
 
 // 🔄 Auto poster
-module.exports.handleEvent = async function ({ api, models }) {
+module.exports.handleEvent = async function ({ api }) {
   if (started) return;
   started = true;
-
-  const { Shop, Bank } = models;
 
   setInterval(async () => {
     const sellers = await Shop.findAll();
