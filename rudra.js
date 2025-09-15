@@ -182,14 +182,14 @@ function onBot({ models: botModel }) {
 }
 
 //========= Connecting to Database =========//
-const db = require("./includes/database");
+const { connectDB } = require("./includes/database");
 
 (async () => {
   try {
-    await db.sequelize.sync();
-    global.models = db; // 🔥 models accessible anywhere
+    const models = await connectDB();
+    global.models = models; // 🔥 models accessible anywhere
     logger(global.getText('priyansh', 'successConnectDatabase'), '[ DATABASE ]');
-    onBot({ models: db });
+    onBot({ models });
   } catch (error) { 
     logger(global.getText('priyansh', 'failConnectDatabase', JSON.stringify(error)), '[ DATABASE ]'); 
   }
