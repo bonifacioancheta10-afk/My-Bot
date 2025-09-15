@@ -1,23 +1,43 @@
+// includes/database/index.js
 const { Sequelize } = require("sequelize");
-const { resolve } = require("path");
+const path = require("path");
+const fs = require("fs");
 
 const sequelize = new Sequelize({
-  dialect: "sqlite",
-  storage: resolve(__dirname, "../data.sqlite"),
-  logging: false
+  dialect: "sqlite", // gamit mo sqlite, kaya ito
+  storage: path.join(process.cwd(), "data.sqlite"),
+  logging: false,
 });
 
 async function connectDB() {
   try {
     await sequelize.authenticate();
-    console.log("[DB] ✅ Connection established.");
+    console.log("✅ Database connected!");
 
+    // Load lahat ng models sa includes/database/model/
+    const db = {};
+    const modelsPath = path.join(__dirname, "model");
+
+    fs.readdirSync(modelsPath).forEach((file) => {
+      if (file.endsWith(".js")) {
+        const model = require(path.join(modelsPath, file))(sequelize);
+        db[model.name] = model;
+      }
+    });
+
+    // Attach sequelize instance
+    db.sequelize = sequelize;
+    db.Sequelize = Sequelize;
+
+    // Sync all models (auto-create tables kung wala pa)
     await sequelize.sync();
-    console.log("[DB] ✅ All models synced.");
+    console.log("✅ Models synchronized!");
+
+    return db;
   } catch (err) {
-    console.error("[DB] ❌ Failed to connect to database:", err.message);
-    process.exit(1); // wag tuloy pag talagang failed
+    console.error("❌ Database connection error:", err);
+    throw err;
   }
 }
 
-module.exports = { sequelize, connectDB };
+module.exports = { connectDB, sequelize, Sequelize };
