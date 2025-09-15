@@ -1,10 +1,9 @@
 // === modules/commands/rules.js ===
-const db = require("../../database");
-const { Rules } = db;
+const { Rules } = global.models;
 
 module.exports.config = {
   name: "rules",
-  version: "1.0.2",
+  version: "1.0.3",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Manage group rules (per GC, saved in DB)",
