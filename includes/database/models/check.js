@@ -1,4 +1,7 @@
-module.exports = (sequelize, DataTypes) => {
+// models/check.js
+const { DataTypes } = require("sequelize");
+
+module.exports = (sequelize) => {
   const Check = sequelize.define("Check", {
     threadID: {
       type: DataTypes.STRING,
