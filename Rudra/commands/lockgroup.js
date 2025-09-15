@@ -1,7 +1,7 @@
 // === modules/commands/lockgroup.js ===
 module.exports.config = {
   name: "lockgroup",
-  version: "2.0.0",
+  version: "2.0.1",
   role: 1,
   author: "ChatGPT",
   cooldowns: 5,
@@ -11,7 +11,7 @@ module.exports.config = {
 
 module.exports.run = async function({ api, event, args, models }) {
   const { threadID, messageID } = event;
-  const LockGroup = models.use("LockGroup");
+  const { LockGroup } = models;
 
   if (!args[0]) {
     return api.sendMessage("❗ Usage: /lockgroup name | remove", threadID, messageID);
@@ -36,7 +36,7 @@ module.exports.handleEvent = async function({ api, event, models }) {
   const { threadID } = event;
   if (!threadID) return;
 
-  const LockGroup = models.use("LockGroup");
+  const { LockGroup } = models;
   const record = await LockGroup.findOne({ where: { threadID } });
   if (!record || !record.name) return;
 
