@@ -12,23 +12,19 @@ const path = require("path");
 const app = express();
 const port = process.env.PORT || 8080;
 
-// Serve the index.html file
 app.get("/", function (req, res) {
   res.sendFile(path.join(__dirname, "/index.html"));
 });
 
-// Start the server and add error handling
-app
-  .listen(port, () => {
-    logger(`Server is running on port ${port}...`, "[ MirryKal ]");
-  })
-  .on("error", (err) => {
-    if (err.code === "EACCES") {
-      logger(`Permission denied. Cannot bind to port ${port}.`, "[ MirryKal ]");
-    } else {
-      logger(`Server error: ${err.message}`, "[ Kripya Dhyan de ]");
-    }
-  });
+app.listen(port, () => {
+  logger(`Server is running on port ${port}...`, "[ MirryKal ]");
+}).on("error", (err) => {
+  if (err.code === "EACCES") {
+    logger(`Permission denied. Cannot bind to port ${port}.`, "[ MirryKal ]");
+  } else {
+    logger(`Server error: ${err.message}`, "[ Kripya Dhyan de ]");
+  }
+});
 
 ///////////////////////////////////////////////////////////
 //========= Load Database & Models ======================//
@@ -39,7 +35,7 @@ const db = require("./includes/database");
 (async () => {
   try {
     await db.sequelize.sync();
-    global.models = db; // 🔥 models accessible kahit saan
+    global.models = db; // 🔥 para ma-access kahit saan
     logger("✅ Database synced successfully.", "[ Database ]");
   } catch (err) {
     logger(`❌ Database sync error: ${err.message}`, "[ Database ]");
@@ -55,15 +51,11 @@ global.countRestart = global.countRestart || 0;
 function startBot(message) {
   if (message) logger(message, "[ MirryKal ]");
 
-  const child = spawn(
-    "node",
-    ["--trace-warnings", "--async-stack-traces", "rudra.js"],
-    {
-      cwd: __dirname,
-      stdio: "inherit",
-      shell: true,
-    }
-  );
+  const child = spawn("node", ["--trace-warnings", "--async-stack-traces", "rudra.js"], {
+    cwd: __dirname,
+    stdio: "inherit",
+    shell: true,
+  });
 
   child.on("close", (codeExit) => {
     if (codeExit !== 0 && global.countRestart < 5) {
@@ -74,10 +66,7 @@ function startBot(message) {
       );
       startBot();
     } else {
-      logger(
-        `Bot stopped after ${global.countRestart} restarts.`,
-        "[ MirrKal ]"
-      );
+      logger(`Bot stopped after ${global.countRestart} restarts.`, "[ MirrKal ]");
     }
   });
 
