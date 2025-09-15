@@ -1,16 +1,10 @@
 const moment = require("moment-timezone");
 const { readdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } = require("fs-extra");
 const { join, resolve } = require("path");
-const { execSync } = require("child_process");
 const logger = require("./utils/log.js");
 const login = require("fca-smart-shankar"); 
 const axios = require("axios");
-const listPackage = JSON.parse(readFileSync('./package.json')).dependencies;
-const listbuiltinModules = require("module").builtinModules;
 
-///////////////////////////////////////////////////////////
-//========= Global Client / Data Setup ==================//
-///////////////////////////////////////////////////////////
 global.client = {
   commands: new Map(),
   events: new Map(),
@@ -56,9 +50,7 @@ global.configModule = {};
 global.moduleData = [];
 global.language = {};
 
-///////////////////////////////////////////////////////////
-//========= Load Config =================================//
-///////////////////////////////////////////////////////////
+//========= Load Config =========//
 let configValue;
 try {
   global.client.configPath = join(global.client.mainPath, "config.json");
@@ -81,9 +73,7 @@ try {
 
 writeFileSync(global.client.configPath + ".temp", JSON.stringify(global.config, null, 4), 'utf8');
 
-///////////////////////////////////////////////////////////
-//========= Load Language ===============================//
-///////////////////////////////////////////////////////////
+//========= Load language =========//
 const langFile = (readFileSync(`${__dirname}/languages/${global.config.language || "en"}.lang`, { encoding: 'utf-8' })).split(/\r?\n|\r/);
 const langData = langFile.filter(item => item.indexOf('#') != 0 && item != '');
 for (const item of langData) {
@@ -108,9 +98,7 @@ global.getText = function (...args) {
   return text;
 };
 
-///////////////////////////////////////////////////////////
-//========= Appstate ====================================//
-///////////////////////////////////////////////////////////
+//========= Appstate =========//
 let appStateFile, appState;
 try {
   appStateFile = resolve(join(global.client.mainPath, global.config.APPSTATEPATH || "appstate.json"));
@@ -120,17 +108,15 @@ try {
   return logger.loader(global.getText("priyansh", "notFoundPathAppstate"), "error");
 }
 
-///////////////////////////////////////////////////////////
 //========= Login account and start Listen Event =========//
-///////////////////////////////////////////////////////////
-function onBot() {
+function onBot({ models: botModel }) {
   const loginData = { appState };
   login(loginData, async (loginError, loginApiData) => {
     if (loginError) return logger(JSON.stringify(loginError), `ERROR`);
-    loginApiData.setOptions(global.config.FCAOption);
-    writeFileSync(appStateFile, JSON.stringify(loginApiData.getAppState(), null, '\x09'));
-    global.client.api = loginApiData;
-    global.config.version = '1.2.14';
+    loginApiData.setOptions(global.config.FCAOption)
+    writeFileSync(appStateFile, JSON.stringify(loginApiData.getAppState(), null, '\x09'))
+    global.client.api = loginApiData
+    global.config.version = '1.2.14'
     global.client.timeStart = Date.now();
 
     //========= Load Commands =========//
@@ -143,7 +129,7 @@ function onBot() {
         if (global.client.commands.has(module.config.name || '')) throw new Error(global.getText('priyansh', 'nameExist'));
         if (module.onLoad) {
           try {
-            module.onLoad({ api: loginApiData, models: global.models });
+            module.onLoad({ api: loginApiData, models: botModel });
           } catch (e) {
             throw new Error(global.getText('priyansh', 'cantOnload', module.config.name, JSON.stringify(e)), 'error');
           }
@@ -166,7 +152,7 @@ function onBot() {
         if (global.client.events.has(event.config.name) || '') throw new Error(global.getText('priyansh', 'nameExist'));
         if (event.onLoad) {
           try {
-            event.onLoad({ api: loginApiData, models: global.models });
+            event.onLoad({ api: loginApiData, models: botModel });
           } catch (e) {
             throw new Error(global.getText('priyansh', 'cantOnload', event.config.name, JSON.stringify(e)), 'error');
           }
@@ -178,14 +164,14 @@ function onBot() {
       }
     }
 
-    logger.loader(global.getText('priyansh', 'finishLoadModule', global.client.commands.size, global.client.events.size));
-    logger.loader(`Startup Time: ${((Date.now() - global.client.timeStart) / 1000).toFixed()}s`);
-    logger.loader('===== [ ' + (Date.now() - global.client.timeStart) + 'ms ] =====');
+    logger.loader(global.getText('priyansh', 'finishLoadModule', global.client.commands.size, global.client.events.size)) 
+    logger.loader(`Startup Time: ${((Date.now() - global.client.timeStart) / 1000).toFixed()}s`)   
+    logger.loader('===== [ ' + (Date.now() - global.client.timeStart) + 'ms ] =====')
 
-    writeFileSync(global.client.configPath, JSON.stringify(global.config, null, 4), 'utf8');
-    unlinkSync(global.client.configPath + '.temp');
+    writeFileSync(global.client.configPath, JSON.stringify(global.config, null, 4), 'utf8') 
+    unlinkSync(global.client.configPath + '.temp');        
 
-    const listener = require('./includes/listen')({ api: loginApiData, models: global.models });
+    const listener = require('./includes/listen')({ api: loginApiData, models: botModel });
     global.handleListen = loginApiData.listenMqtt((error, message) => {
       if (error) return logger(global.getText('priyansh', 'handleListenError', JSON.stringify(error)), 'error');
       if (['presence', 'typ', 'read_receipt'].includes(message.type)) return;
@@ -195,19 +181,17 @@ function onBot() {
   });
 }
 
-///////////////////////////////////////////////////////////
-//========= Connecting to Database ======================//
-///////////////////////////////////////////////////////////
+//========= Connecting to Database =========//
 const db = require("./includes/database");
 
 (async () => {
   try {
     await db.sequelize.sync();
-    global.models = db;
-    logger("✅ Database connected & synced.", "[ DATABASE ]");
-    onBot();
+    global.models = db; // 🔥 models accessible anywhere
+    logger(global.getText('priyansh', 'successConnectDatabase'), '[ DATABASE ]');
+    onBot({ models: db });
   } catch (error) { 
-    logger(`❌ Database connection failed: ${error.message}`, "[ DATABASE ]"); 
+    logger(global.getText('priyansh', 'failConnectDatabase', JSON.stringify(error)), '[ DATABASE ]'); 
   }
 })();
 
