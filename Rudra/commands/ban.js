@@ -1,6 +1,4 @@
-// commands/ban.js
-const db = require("../../database"); // autoloader index.js
-const { Ban } = db;
+const { Ban } = global.models; // gamitin yung global na naka-load sa index.js
 
 module.exports.config = {
   name: "ban",
@@ -10,17 +8,17 @@ module.exports.config = {
   description: "Ban system with DB (kick + save reason)",
   commandCategory: "moderation",
   usages: "/ban @mention reason | /ban list | /ban reset | /ban unban @mention",
-  cooldowns: 5
+  cooldowns: 5,
 };
 
 async function sendUsage(api, threadID, messageID) {
   return api.sendMessage(
     "❌ Mali ang paggamit!\n" +
-    "✅ Mga tamang gamit:\n" +
-    "/ban @mention reason\n" +
-    "/ban list\n" +
-    "/ban reset\n" +
-    "/ban unban @mention",
+      "✅ Mga tamang gamit:\n" +
+      "/ban @mention reason\n" +
+      "/ban list\n" +
+      "/ban reset\n" +
+      "/ban unban @mention",
     threadID,
     messageID
   );
@@ -35,7 +33,8 @@ module.exports.run = async function ({ api, event, args }) {
   // 📌 /ban list
   if (subCommand === "list") {
     const bans = await Ban.findAll({ where: { threadID } });
-    if (!bans.length) return api.sendMessage("✅ Walang naka-ban sa thread na ito.", threadID, messageID);
+    if (!bans.length)
+      return api.sendMessage("✅ Walang naka-ban sa thread na ito.", threadID, messageID);
 
     let msg = "📋 Listahan ng mga naka-ban:\n";
     bans.forEach((b, i) => {
@@ -56,9 +55,14 @@ module.exports.run = async function ({ api, event, args }) {
     const userID = Object.keys(mentions)[0];
 
     const unban = await Ban.destroy({ where: { threadID, userID } });
-    if (!unban) return api.sendMessage("⚠️ Walang ban record para sa user na ito.", threadID, messageID);
+    if (!unban)
+      return api.sendMessage("⚠️ Walang ban record para sa user na ito.", threadID, messageID);
 
-    return api.sendMessage(`✅ Natanggal na ang ban kay ${mentions[userID] || userID}`, threadID, messageID);
+    return api.sendMessage(
+      `✅ Natanggal na ang ban kay ${mentions[userID] || userID}`,
+      threadID,
+      messageID
+    );
   }
 
   // 📌 /ban @mention reason
@@ -80,8 +84,17 @@ module.exports.run = async function ({ api, event, args }) {
   await Ban.create({ userID, threadID, reason });
 
   api.removeUserFromGroup(userID, threadID, (err) => {
-    if (err) return api.sendMessage("⚠️ Hindi na-kick ang user (baka admin siya o may error).", threadID, messageID);
-    return api.sendMessage(`✅ User ${mentions[userID] || userID} ay na-ban!\nReason: ${reason}`, threadID, messageID);
+    if (err)
+      return api.sendMessage(
+        "⚠️ Hindi na-kick ang user (baka admin siya o may error).",
+        threadID,
+        messageID
+      );
+    return api.sendMessage(
+      `✅ User ${mentions[userID] || userID} ay na-ban!\nReason: ${reason}`,
+      threadID,
+      messageID
+    );
   });
 };
 
