@@ -1,67 +1,52 @@
-const fs = require("fs");
-const path = require("path");
-
+// === modules/commands/lockgroup.js ===
 module.exports.config = {
-    name: "lockgroup",
-    version: "1.0.0",
-    role: 1,
-    author: "ChatGPT",
-    cooldowns: 5,
-    description: "Lock group name or photo",
-    usages: "/lockgroup name | /lockgroup photo (reply to image)"
+  name: "lockgroup",
+  version: "2.0.0",
+  role: 1,
+  author: "ChatGPT",
+  cooldowns: 5,
+  description: "Lock group name (per GC)",
+  usages: "/lockgroup name | /lockgroup remove"
 };
 
-const lockFile = path.join(__dirname, "lockData.json");
+module.exports.run = async function({ api, event, args, models }) {
+  const { threadID, messageID } = event;
+  const LockGroup = models.use("LockGroup");
 
-// helper para magbasa/sulat ng lock data
-function getLockData() {
-    if (!fs.existsSync(lockFile)) return {};
-    return JSON.parse(fs.readFileSync(lockFile, "utf8"));
-}
-function saveLockData(data) {
-    fs.writeFileSync(lockFile, JSON.stringify(data, null, 2));
-}
+  if (!args[0]) {
+    return api.sendMessage("❗ Usage: /lockgroup name | remove", threadID, messageID);
+  }
 
-module.exports.run = async function({ api, event, args }) {
-    const { threadID, messageID, type, messageReply } = event;
-    const option = args[0];
+  if (args[0] === "name") {
+    const info = await api.getThreadInfo(threadID);
+    await LockGroup.upsert({ threadID, name: info.threadName });
+    return api.sendMessage(`🔒 Group name is now locked to: "${info.threadName}"`, threadID, messageID);
+  }
 
-    if (!option) {
-        return api.sendMessage("❗ Usage: /lockgroup name | photo", threadID, messageID);
+  if (args[0] === "remove") {
+    await LockGroup.destroy({ where: { threadID } });
+    return api.sendMessage("🔓 Group name lock removed.", threadID, messageID);
+  }
+
+  return api.sendMessage("❌ Invalid option. Use: name | remove", threadID, messageID);
+};
+
+// === Auto enforce lock ===
+module.exports.handleEvent = async function({ api, event, models }) {
+  const { threadID } = event;
+  if (!threadID) return;
+
+  const LockGroup = models.use("LockGroup");
+  const record = await LockGroup.findOne({ where: { threadID } });
+  if (!record || !record.name) return;
+
+  const info = await api.getThreadInfo(threadID);
+  if (info.threadName !== record.name) {
+    try {
+      await api.setTitle(record.name, threadID);
+      api.sendMessage(`⚠️ Group name is locked to: "${record.name}"`, threadID);
+    } catch (e) {
+      console.error("LockGroup error:", e);
     }
-
-    let data = getLockData();
-    if (!data[threadID]) data[threadID] = {};
-
-    if (option === "name") {
-        const info = await api.getThreadInfo(threadID);
-        data[threadID].name = info.threadName;
-        saveLockData(data);
-        return api.sendMessage(`🔒 Group name is locked to: "${info.threadName}"`, threadID, messageID);
-    }
-
-    if (option === "photo") {
-        // dapat reply ito sa photo
-        if (type !== "message_reply" || !messageReply.attachments[0] || messageReply.attachments[0].type !== "photo") {
-            return api.sendMessage("⚠️ Please reply to a photo to lock as group photo!", threadID, messageID);
-        }
-        try {
-            const photoUrl = messageReply.attachments[0].url;
-            const photoPath = path.join(__dirname, `photo_${threadID}.jpg`);
-
-            // download image
-            const axios = require("axios");
-            const res = await axios.get(photoUrl, { responseType: "arraybuffer" });
-            fs.writeFileSync(photoPath, Buffer.from(res.data, "binary"));
-
-            data[threadID].photo = photoPath;
-            saveLockData(data);
-
-            return api.sendMessage("🖼️ Group photo locked!", threadID, messageID);
-        } catch (e) {
-            return api.sendMessage("⚠️ Failed to save or set the photo!", threadID, messageID);
-        }
-    }
-
-    return api.sendMessage("❌ Invalid option. Use: name | photo", threadID, messageID);
+  }
 };
