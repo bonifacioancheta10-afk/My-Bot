@@ -1,7 +1,7 @@
 const moment = require("moment-timezone");
 const { readdirSync, readFileSync, writeFileSync, existsSync, unlinkSync } = require("fs-extra");
 const { join, resolve } = require("path");
-const { execSync } = require('child_process');
+const { execSync } = require("child_process");
 const logger = require("./utils/log.js");
 const login = require("fca-smart-shankar"); 
 const axios = require("axios");
@@ -74,7 +74,6 @@ try {
   return logger.loader("Can't load file config!", "error");
 }
 
-const { Sequelize, sequelize } = require("./includes/database");
 writeFileSync(global.client.configPath + ".temp", JSON.stringify(global.config, null, 4), 'utf8');
 
 //========= Load language =========//
@@ -184,11 +183,11 @@ function onBot({ models: botModel }) {
 }
 
 //========= Connecting to Database =========//
+const { connectDB } = require("./includes/database");
+
 (async () => {
   try {
-    await sequelize.authenticate();
-    const authentication = { Sequelize, sequelize };
-    const models = require('./includes/database/model')(authentication);
+    const models = await connectDB();
     logger(global.getText('priyansh', 'successConnectDatabase'), '[ DATABASE ]');
     onBot({ models });
   } catch (error) { 
