@@ -1,6 +1,6 @@
-const { sequelize } = require("../../database");
-const initModels = require("../../database/models"); // ✅ folder "models"
-const { Ban } = initModels({ sequelize }); // ✅ wala nang .model
+// commands/ban.js
+const db = require("../../database"); // autoloader index.js
+const { Ban } = db;
 
 module.exports.config = {
   name: "ban",
