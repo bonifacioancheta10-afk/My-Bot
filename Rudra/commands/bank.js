@@ -1,6 +1,4 @@
-// === modules/commands/bank.js ===
-const db = require("../../database"); // autoloader index.js
-const { Bank } = db;
+const { Bank } = global.models; // gamitin yung global models, hindi na require
 
 module.exports.config = {
   name: "bank",
@@ -40,7 +38,6 @@ module.exports.handleEvent = async function ({ event, Users }) {
 // 🔹 Run command
 module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID } = event;
-
   const command = args[0]?.toLowerCase();
 
   // ✅ Show usage guide if wrong command
