@@ -1,116 +1,20 @@
-const fs = require("fs");
-const path = require("path");
-
-// Paths
-const dataFile = path.join(__dirname, "check.json");
-const backupDir = path.join(__dirname, "check_backups");
-
-// Ensure backup folder exists
-if (!fs.existsSync(backupDir)) {
-  fs.mkdirSync(backupDir);
-}
-
-// Global in-memory data
-let data = {};
-if (fs.existsSync(dataFile)) {
-  try {
-    data = JSON.parse(fs.readFileSync(dataFile, "utf8"));
-  } catch {
-    data = {};
-  }
-} else {
-  data = {};
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), "utf8");
-}
-
-// Save data (persistent)
-function saveData() {
-  fs.writeFileSync(dataFile, JSON.stringify(data, null, 2), "utf8");
-}
-
-// Add message count
-function addMessage(threadID, userID) {
-  if (!data[threadID]) data[threadID] = {};
-  if (!data[threadID][userID]) data[threadID][userID] = 0;
-  data[threadID][userID]++;
-}
-
-// Get all message counts for a thread
-function getThreadData(threadID) {
-  if (!data[threadID]) return [];
-  return Object.entries(data[threadID]).map(([userID, count]) => ({
-    userID,
-    count,
-  }));
-}
-
-// 🔹 Auto-save every 1 minute
-setInterval(saveData, 60 * 1000);
-
-// 🔹 Auto-backup every 5 minutes
-setInterval(() => {
-  const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
-  const backupFile = path.join(backupDir, `check_backup_${timestamp}.json`);
-  try {
-    fs.copyFileSync(dataFile, backupFile);
-    console.log(`[Backup] Saved to ${backupFile}`);
-  } catch (e) {
-    console.error("[Backup Error]", e);
-  }
-}, 5 * 60 * 1000);
-
-// === Command Config ===
-module.exports.config = {
-  name: "check",
-  version: "2.1.0",
-  hasPermssion: 0,
-  credits: "ChatGPT + Priyansh Rajput",
-  description: "Interactive message check (persistent + backup)",
-  commandCategory: "Utilities",
-  usages: "check / check all / check rank",
-  cooldowns: 5,
-};
-
-const getRankName = (count) => {
-  return count > 50000 ? "War Generals"
-    : count > 9000 ? "Master"
-    : count > 8000 ? "Elite V"
-    : count > 6100 ? "Elite IV"
-    : count > 5900 ? "Elite III"
-    : count > 5700 ? "Elite II"
-    : count > 5200 ? "Elite I"
-    : count > 5000 ? "Diamond V"
-    : count > 4800 ? "Diamond IV"
-    : count > 4500 ? "Diamond III"
-    : count > 4000 ? "Diamond II"
-    : count > 3800 ? "Diamond I"
-    : count > 3500 ? "Platinum IV"
-    : count > 3200 ? "Platinum III"
-    : count > 3000 ? "Platinum II"
-    : count > 2900 ? "Platinum I"
-    : count > 2500 ? "Gold IV"
-    : count > 2300 ? "Gold III"
-    : count > 2000 ? "Gold II"
-    : count > 1500 ? "Gold I"
-    : count > 1200 ? "Silver III"
-    : count > 1000 ? "Silver II"
-    : count > 900 ? "Silver I"
-    : count > 500 ? "Copper III"
-    : count > 100 ? "Copper II"
-    : "Copper I";
-};
-
-// 🔹 Auto add message for each event
-module.exports.handleEvent = function ({ event }) {
-  const { threadID, senderID } = event;
-  if (!threadID || !senderID) return;
-  addMessage(threadID, senderID);
-};
-
-// 🔹 Run check command
 module.exports.run = async function ({ api, event, args, Users }) {
   const { threadID, senderID, mentions } = event;
   const query = args[0] ? args[0].toLowerCase() : "";
+
+  // ✅ Kapag mali ang paggamit ng command
+  const validArgs = ["", "all", "rank"];
+  if (!validArgs.includes(query)) {
+    return api.sendMessage(
+      "❌ Invalid usage.\n\n" +
+      "📌 Correct Usage:\n" +
+      "• /check → show your stats\n" +
+      "• /check @tag → show tagged user's stats\n" +
+      "• /check all → show all members' stats\n" +
+      "• /check rank → show rank list",
+      threadID
+    );
+  }
 
   let rows = getThreadData(threadID);
   let msg = "";
