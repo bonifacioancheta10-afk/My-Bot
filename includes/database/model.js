@@ -9,8 +9,10 @@ module.exports = function (input) {
   const Shop = require("./models/shop")(input);
   const Check = require("./models/check")(input);
   const LockGroup = require("./models/lockGroup")(input);
-  const Rules = require("./models/rules")(input); // ✅
+  const Rules = require("./models/rules")(input);      // ✅ bago
+  const Scammer = require("./models/scammer")(input);  // ✅ bago
 
+  // sync lahat
   Users.sync({ force });
   Threads.sync({ force });
   Currencies.sync({ force });
@@ -19,7 +21,8 @@ module.exports = function (input) {
   Shop.sync({ force });
   Check.sync({ force });
   LockGroup.sync({ force });
-  Rules.sync({ force }); // ✅
+  Rules.sync({ force });     // ✅ bago
+  Scammer.sync({ force });   // ✅ bago
 
   return {
     model: {
@@ -31,7 +34,8 @@ module.exports = function (input) {
       Shop,
       Check,
       LockGroup,
-      Rules, // ✅
+      Rules,    // ✅ bago
+      Scammer,  // ✅ bago
     },
     use: function (modelName) {
       return this.model[`${modelName}`];
