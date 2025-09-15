@@ -5,7 +5,7 @@ module.exports.config = {
     hasPermssion: 1,
     description: "Toggle Anti-Robbery (Prevent changing group admins)",
     usages: "/antirobbery",
-    commandCategory: "moderation",
+    commandCategory: "Moderation",
     cooldowns: 3
 };
 
