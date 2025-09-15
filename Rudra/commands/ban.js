@@ -1,6 +1,6 @@
 const { sequelize } = require("../../database");
-const initModels = require("../../database/model");
-const { Ban } = initModels({ sequelize }).model;
+const initModels = require("../../database/models"); // ✅ folder "models"
+const { Ban } = initModels({ sequelize }); // ✅ wala nang .model
 
 module.exports.config = {
   name: "ban",
