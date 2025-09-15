@@ -1,53 +1,47 @@
-const { DataTypes } = require("sequelize");
+// includes/database/model.js
+module.exports = function ({ sequelize, Sequelize }) {
+  const force = false;
 
-module.exports = ({ sequelize, Sequelize }) => {
-  const db = {};
+  // === Require lahat ng models ===
+  const Users = require("./models/users")(sequelize, Sequelize);
+  const Threads = require("./models/threads")(sequelize, Sequelize);
+  const Currencies = require("./models/currencies")(sequelize, Sequelize);
+  const Bans = require("./models/ban")(sequelize, Sequelize);
+  const Bank = require("./models/bank")(sequelize, Sequelize);
+  const Shop = require("./models/shop")(sequelize, Sequelize);
+  const Check = require("./models/check")(sequelize, Sequelize);
+  const LockGroup = require("./models/lockGroup")(sequelize, Sequelize);
+  const Rules = require("./models/rules")(sequelize, Sequelize);
+  const Scammer = require("./models/scammer")(sequelize, Sequelize);
 
-  // === Bank Model ===
-  db.Bank = sequelize.define("Bank", {
-    userID: {
-      type: DataTypes.STRING,
-      primaryKey: true,
-      allowNull: false
+  // === Auto sync lahat ng tables ===
+  Users.sync({ force });
+  Threads.sync({ force });
+  Currencies.sync({ force });
+  Bans.sync({ force });
+  Bank.sync({ force });
+  Shop.sync({ force });
+  Check.sync({ force });
+  LockGroup.sync({ force });
+  Rules.sync({ force });
+  Scammer.sync({ force });
+
+  // === Return object para magamit sa commands ===
+  return {
+    model: {
+      Users,
+      Threads,
+      Currencies,
+      Bans,
+      Bank,
+      Shop,
+      Check,
+      LockGroup,
+      Rules,
+      Scammer,
     },
-    balance: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-      defaultValue: 0
-    }
-  });
-
-  // === Ban Model ===
-  db.Ban = sequelize.define("Ban", {
-    userID: {
-      type: DataTypes.STRING,
-      allowNull: false
+    use: function (modelName) {
+      return this.model[`${modelName}`];
     },
-    threadID: {
-      type: DataTypes.STRING,
-      allowNull: false
-    },
-    reason: {
-      type: DataTypes.TEXT,
-      allowNull: true
-    }
-  });
-
-  // === LockGroup Model ===
-  db.LockGroup = sequelize.define("LockGroup", {
-    threadID: {
-      type: DataTypes.STRING,
-      allowNull: false,
-      unique: true
-    },
-    name: {
-      type: DataTypes.STRING,
-      allowNull: true
-    }
-  });
-
-  db.sequelize = sequelize;
-  db.Sequelize = Sequelize;
-
-  return db;
+  };
 };
