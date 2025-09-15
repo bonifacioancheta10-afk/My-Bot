@@ -1,6 +1,7 @@
+// === modules/commands/scammer.js ===
 module.exports.config = {
   name: "scammer",
-  version: "1.0.0",
+  version: "1.0.1",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Scammer list manager",
@@ -9,9 +10,9 @@ module.exports.config = {
   cooldowns: 5,
 };
 
-module.exports.run = async function ({ api, event, args, Models, Users }) {
+module.exports.run = async function ({ api, event, args, models }) {
   const { threadID, senderID } = event;
-  const Scammer = Models.use("Scammer");
+  const { Scammer } = models;
 
   const sub = args[0]?.toLowerCase();
 
