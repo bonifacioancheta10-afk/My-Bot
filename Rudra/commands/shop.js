@@ -1,10 +1,9 @@
 // === modules/commands/shop.js ===
-const db = require("../../database");
-const { Shop, Bank } = db;
+const { Shop, Bank } = global.models;
 
 module.exports.config = {
   name: "shop",
-  version: "2.0.2",
+  version: "2.0.3",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Auto Shop system (per GC, every 20 minutes)",
