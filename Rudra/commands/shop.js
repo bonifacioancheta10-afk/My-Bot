@@ -2,7 +2,7 @@
 
 module.exports.config = {
   name: "shop",
-  version: "2.0.0",
+  version: "2.0.1",
   hasPermssion: 0,
   credits: "ChatGPT",
   description: "Auto Shop system (per GC, every 20 minutes)",
@@ -16,8 +16,7 @@ let started = false;
 
 module.exports.run = async function ({ api, event, args, Users, models }) {
   const { threadID, senderID } = event;
-  const Shop = models.use("Shop");
-  const Bank = models.use("Bank");
+  const { Shop, Bank } = models;
 
   const sub = args[0]?.toLowerCase();
 
@@ -88,7 +87,7 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
     });
 
     if (!created) {
-      let newDetails = entry.details;
+      let newDetails = Array.isArray(entry.details) ? entry.details : [];
       details.forEach((d) => {
         if (!newDetails.includes(d)) newDetails.push(d);
       });
@@ -101,12 +100,11 @@ module.exports.run = async function ({ api, event, args, Users, models }) {
 };
 
 // 🔄 Auto poster
-module.exports.handleEvent = async function ({ api, models, Users }) {
+module.exports.handleEvent = async function ({ api, models }) {
   if (started) return;
   started = true;
 
-  const Shop = models.use("Shop");
-  const Bank = models.use("Bank");
+  const { Shop, Bank } = models;
 
   setInterval(async () => {
     const sellers = await Shop.findAll();
