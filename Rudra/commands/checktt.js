@@ -1,8 +1,6 @@
 // === modules/commands/check.js ===
-const { sequelize } = require("../../database");
-const initModels = require("../../database/models");
-const models = initModels(sequelize);
-const { Check } = models;
+const db = require("../../database"); // autoloader index.js
+const { Check } = db;
 
 // 🔹 Function to convert count → rank
 function getRankName(count) {
